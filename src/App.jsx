@@ -420,7 +420,7 @@ export default function App() {
 
         .muted { color: var(--muted); }
         .small { font-size: 0.8rem; }
-        .body-text { color: #E2E8F0; line-height: 1.6; max-width: 60ch; }
+        .body-text { color: var(--text); line-height: 1.6; max-width: 60ch; }
         .eyebrow { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
 
         /* ---------- shell ---------- */
@@ -479,7 +479,7 @@ export default function App() {
         .venture-card-image { width: 100%; height: 150px; background-size: cover; background-position: center; }
         .venture-card-big .venture-card-image { width: 45%; height: auto; min-height: 200px; }
         .venture-card-body { padding: 1.2rem; display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
-        .venture-card-body h3 { font-size: 1.1rem; color: #FFFFFF; }
+        .venture-card-body h3 { font-size: 1.1rem; color: var(--text); }
         .venture-card-glow { position: absolute; width: 60px; height: 60px; border-radius: 50%; filter: blur(35px); opacity: 0.25; top: -20px; right: -20px; }
         .no-results { grid-column: 1 / -1; text-align: center; padding: 4rem 0; color: var(--muted); }
 
@@ -498,7 +498,7 @@ export default function App() {
   gap: 2.5rem;
   margin-top: 2.25rem;
 }
-        .detail-main h2 { font-size: 1.25rem; margin-bottom: 0.8rem; margin-top: 1.75rem; color: #FFFFFF; border-left: 3px solid var(--utb-green); padding-left: 0.5rem; }
+        .detail-main h2 { font-size: 1.25rem; margin-bottom: 0.8rem; margin-top: 1.75rem; color: var(--utb-green); border-left: 3px solid var(--utb-green); padding-left: 0.5rem; }
         .detail-main h2:first-child { margin-top: 0; }
         .products-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
         .product-card { border: 1px solid var(--glass-border); border-radius: 12px; overflow: hidden; background: var(--ink-elevated); }
@@ -525,8 +525,8 @@ export default function App() {
         label { display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; color: var(--muted); }
         .color-row { display: flex; align-items: center; gap: 0.6rem; }
         .color-row input[type="color"] { width: 42px; height: 38px; padding: 2px; background: none; border: none; cursor: pointer; }
-        .icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; color: var(--muted); }
-        .icon-btn:hover { color: #ff6b6b; border-color: #ff6b6b; }
+        .icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; color: var(--muted); background: #fff; transition: all 0.2s; }
+        .icon-btn:hover { color: #FFFFFF; background: #EF4444; border-color: #EF4444; }
 
         .success-state { max-width: 480px; margin: 5rem auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
         .success-icon { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); display: flex; align-items: center; justify-content: center; color: #FFFFFF; margin-bottom: 0.75rem; }
