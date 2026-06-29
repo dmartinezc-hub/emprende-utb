@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc } from "firebase/firestore";
 import {
   Search,
   Phone,
@@ -46,29 +48,7 @@ const FACEBOOK_ICON = (props) => (
   </svg>
 );
 
-const seedVentures = [
-  {
-    id: "v1",
-    name: "Sabores Babahoyo",
-    owner: "María José Vera",
-    ownerEmail: "maria.vera@utb.com",
-    career: "Administración de Empresas · 5to semestre",
-    category: "Alimentos",
-    color: "#00A859", 
-    description:
-      "Comida casera y postres a domicilio, hechos con productos de la zona. Pedidos para reuniones, eventos y cumpleaños dentro del campus.",
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80",
-    phone: "0991234567",
-    instagram: "saboresbabahoyo",
-    facebook: "SaboresBabahoyo",
-    tiktok: "",
-    featured: true,
-    products: [
-      { id: "p1", name: "Cazuela de mariscos", price: 6.5, desc: "Porción individual, lista para llevar.", image: "" },
-      { id: "p2", name: "Tres leches", price: 2.0, desc: "Porción de pastel tres leches casero.", image: "" },
-    ],
-  }
-];
+const seedVentures = [];
 
 const emptyProduct = () => ({ id: `p-${Math.random().toString(36).slice(2)}`, name: "", price: "", desc: "", image: "" });
 const emptyForm = (currentOwner, currentEmail) => ({
@@ -592,26 +572,37 @@ function SupportChat() {
   );
 }
 
-export default function App() {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem("utb_logged_user");
-    return saved ? JSON.parse(saved) : null;
-  });
+// ==========================================
+// CONEXIÓN REAL A LA NUBE DE FIREBASE
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDRauBCeoiNxwh4hPjB1SJUcvzpFfM0sLk",
+  authDomain: "emprende-utb.firebaseapp.com",
+  projectId: "emprende-utb",
+  storageBucket: "emprende-utb.firebasestorage.app",
+  messagingSenderId: "867458316566",
+  appId: "1:867458316566:web:86c352af0b75eb9fbe7837"
+};
 
-  const [ventures, setVentures] = useState(() => {
-    const saved = localStorage.getItem("utb_stored_ventures");
-    return saved ? JSON.parse(saved) : seedVentures;
-  });
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
+// ==========================================
 
-  const [view, setView] = useState("home"); 
-  const [selectedId, setSelectedId] = useState(null);
-  const [query, setQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("Todas");
-  const [editingVenture, setEditingVenture] = useState(null);
+const [ventures, setVentures] = useState([]);
 
+  // Cargar datos desde la nube al abrir la página
   useEffect(() => {
-    localStorage.setItem("utb_stored_ventures", JSON.stringify(ventures));
-  }, [ventures]);
+    const loadData = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "ventures"));
+        const list = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setVentures(list);
+      } catch (error) {
+        console.error("Error cargando datos de Firebase:", error);
+      }
+    };
+    loadData();
+  }, []);
 
   const filtered = useMemo(() => {
     return ventures.filter((v) => {
@@ -641,15 +632,23 @@ export default function App() {
     setView("register");
   };
   
-  const handleNewOrEditVenture = (v) => {
-    setVentures((vs) => {
-      const exists = vs.some((item) => item.id === v.id);
-      if (exists) {
-        return vs.map((item) => (item.id === v.id ? v : item));
-      } else {
-        return [v, ...vs];
-      }
-    });
+  const handleNewOrEditVenture = async (v) => {
+    try {
+      // Guardar en la nube (Firestore)
+      await setDoc(doc(db, "ventures", v.id), v);
+      
+      // Actualizar la pantalla del usuario de inmediato
+      setVentures((vs) => {
+        const exists = vs.some((item) => item.id === v.id);
+        if (exists) {
+          return vs.map((item) => (item.id === v.id ? v : item));
+        } else {
+          return [v, ...vs];
+        }
+      });
+    } catch (error) {
+      alert("Error al guardar en la nube: " + error.message);
+    }
     setView("home");
     setEditingVenture(null);
   };
@@ -950,6 +949,6 @@ export default function App() {
           <p className="muted">Desarrollado para la Vitrina Comercial Estudiantil (FAFI)</p>
         </div>
       </footer>
-    </div>
+    </div>cd emprende-utb-real
   );
 }
