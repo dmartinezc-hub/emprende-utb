@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc } from "firebase/firestore";
+import { getFirestore, collection, getDocs, doc, setDoc } from "firebase/firestore";
 
 import {
   Search,
@@ -586,7 +586,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+const db = getFirestore(app); // Revisa que NO tenga un "export" antes de const, para evitar otros conflictos.
 // ==========================================
 
 export default function App() {  
@@ -660,7 +660,7 @@ const [ventures, setVentures] = useState([]);
     setView("home");
     setEditingVenture(null);
   };
-  
+
   const handleLogout = () => {
     localStorage.removeItem("utb_logged_user");
     setUser(null);
