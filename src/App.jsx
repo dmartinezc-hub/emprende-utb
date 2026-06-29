@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc } from "firebase/firestore";
+import { getFirestore, collection, getDocs, doc, setDoc } from "firebase/firestore";
 import {
   Search,
   Phone,
@@ -604,6 +604,7 @@ const [ventures, setVentures] = useState([]);
     loadData();
   }, []);
 
+  
   const filtered = useMemo(() => {
     return ventures.filter((v) => {
       const matchesCategory = activeCategory === "Todas" || v.category === activeCategory;
