@@ -588,9 +588,16 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 // ==========================================
 
-const [ventures, setVentures] = useState([]);
+export default function App() {
+  const [view, setView] = useState("home");
+  const [activeCategory, setActiveCategory] = useState("Todas");
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState(null);
+  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("utb_logged_user")));
+  const [editingVenture, setEditingVenture] = useState(null);
+  const [ventures, setVentures] = useState([]);
 
-  // Cargar datos desde la nube al abrir la página
+  // Cargar datos desde la nube de Firebase al abrir la página
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -602,14 +609,16 @@ const [ventures, setVentures] = useState([]);
       }
     };
     loadData();
-  }, []);
+  }, [view]);
 
-  
   const filtered = useMemo(() => {
     return ventures.filter((v) => {
       const matchesCategory = activeCategory === "Todas" || v.category === activeCategory;
       const q = query.trim().toLowerCase();
-      const matchesQuery = !q || v.name.toLowerCase().includes(q) || v.category.toLowerCase().includes(q) || (v.products && v.products.some((p) => p.name.toLowerCase().includes(q)));
+      const matchesQuery = !q || 
+        v.name.toLowerCase().includes(q) || 
+        v.category.toLowerCase().includes(q) || 
+        (v.products && v.products.some((p) => p.name.toLowerCase().includes(q)));
       return matchesCategory && matchesQuery;
     });
   }, [ventures, query, activeCategory]);
@@ -620,12 +629,7 @@ const [ventures, setVentures] = useState([]);
   const goHome = () => { setView("home"); setEditingVenture(null); };
   
   const handlePublishClick = () => {
-    if (!user) {
-      setView("auth");
-    } else {
-      setEditingVenture(null);
-      setView("register");
-    }
+    if (!user) { setView("auth"); } else { setEditingVenture(null); setView("register"); }
   };
 
   const handleEditVentureClick = (ventureToEdit) => {
@@ -635,10 +639,7 @@ const [ventures, setVentures] = useState([]);
   
   const handleNewOrEditVenture = async (v) => {
     try {
-      // Guardar en la nube (Firestore)
       await setDoc(doc(db, "ventures", v.id), v);
-      
-      // Actualizar la pantalla del usuario de inmediato
       setVentures((vs) => {
         const exists = vs.some((item) => item.id === v.id);
         if (exists) {
@@ -672,19 +673,20 @@ const [ventures, setVentures] = useState([]);
           --text: #1E293B;            
           --muted: #64748B;           
         }
-        * { box-sizing: border-box; }
-        .app-root {
-          font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
-          background: var(--ink);
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        html, body, #root, .app-root {
+          background-color: var(--ink) !important;
           color: var(--text);
           min-height: 100vh;
+          width: 100%;
+          overflow-x: hidden;
+        }
+        .app-root {
+          font-family: 'Inter', system-ui, sans-serif;
           padding-bottom: 4rem;
         }
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
-        h1, h2, h3, h4 { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; margin: 0; letter-spacing: -0.01em; color: var(--text); }
-        p { margin: 0; }
-        a { color: inherit; text-decoration: none; }
-        button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+        h1, h2, h3, h4 { margin: 0; color: var(--text); }
         input, select, textarea {
           background: #FFFFFF;
           border: 1px solid var(--glass-border);
@@ -697,123 +699,86 @@ const [ventures, setVentures] = useState([]);
           outline: none;
         }
         input:focus, select:focus, textarea:focus { border-color: var(--utb-green); }
-
         .muted { color: var(--muted); }
         .small { font-size: 0.8rem; }
-        .body-text { color: var(--text); line-height: 1.6; max-width: 60ch; }
+        .body-text { color: var(--text); line-height: 1.6; }
         .eyebrow { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
 
-        /* ---------- shell ---------- */
         .shell { max-width: 1180px; margin: 0 auto; padding: 0 1.5rem; }
-        .navbar { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; max-width: 1180px; margin: 0 auto; border-bottom: 1px solid var(--glass-border); background: var(--ink-elevated); }
+        .navbar { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--glass-border); background: var(--ink-elevated); }
         .navbar-brand { display: flex; align-items: center; gap: 0.8rem; }
-        
         .navbar-logo-container { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
         .navbar-logo-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .navbar-name { font-weight: 700; font-size: 1.1rem; color: var(--utb-green); }
+        .navbar-sub { font-size: 0.75rem; color: var(--utb-green); }
 
-        .navbar-name { font-weight: 700; font-size: 1.1rem; color: var(--utb-green); letter-spacing: -0.02em; }
-        .navbar-sub { font-size: 0.75rem; color: var(--utb-green); font-weight: 500; }
-
-        .cta-btn { padding: 0.65rem 1.15rem; border-radius: 999px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem; transition: transform 0.15s ease, box-shadow 0.15s ease; }
-        .cta-btn:hover { transform: translateY(-1px); }
+        .cta-btn { padding: 0.65rem 1.15rem; border-radius: 999px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 0.15s; }
         .cta-solid { background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); color: #FFFFFF !important; }
-        .cta-solid:hover { box-shadow: 0 6px 20px -4px rgba(13, 71, 43, 0.4); }
-        .cta-ghost { border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); color: var(--text); }
+        .cta-ghost { border: 1px solid var(--glass-border); background: #FFFFFF; color: var(--text); }
         .cta-ghost:hover { border-color: var(--utb-green); }
-        .cta-btn.small { padding: 0.4rem 0.75rem; font-size: 0.78rem; }
         .cta-btn.full { width: 100%; justify-content: center; margin-top: 1rem; }
 
-        /* ---------- hero ---------- */
         .hero { max-width: 1180px; margin: 2.5rem auto 0; padding: 0 1.5rem; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2.5rem; align-items: center; }
-        .hero h1 { font-size: 2.8rem; line-height: 1.1; font-weight: 700; color: var(--text); }
+        .hero h1 { font-size: 2.8rem; line-height: 1.1; font-weight: 700; }
         .hero-grad { background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .hero p.lead { margin-top: 1rem; color: var(--text); max-width: 46ch; font-size: 1.05rem; line-height: 1.6; }
-        .hero-actions { display: flex; gap: 0.75rem; margin-top: 1.6rem; flex-wrap: wrap; }
+        .hero p.lead { margin-top: 1rem; font-size: 1.05rem; line-height: 1.6; }
         .search-box { display: flex; align-items: center; gap: 0.5rem; background: #FFFFFF; border: 1px solid var(--glass-border); border-radius: 999px; padding: 0.65rem 1.1rem; margin-top: 1.8rem; max-width: 440px; }
-        .search-box input { border: none; background: none; padding: 0; width: 100%; color: var(--text); }
-        .search-box:focus-within { border-color: var(--utb-green); }
+        .search-box input { border: none; background: none; width: 100%; }
         
         .hero-visual { position: relative; aspect-ratio: 1.1/1; border-radius: 24px; overflow: hidden; border: 1px solid var(--glass-border); background: var(--ink-elevated); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
-        .center-logo-img { max-width: 75%; max-height: 70%; object-fit: contain; margin-bottom: 1rem; }
-        
-        .hero-tag { background: rgba(255, 255, 255, 0.95); border: 1px solid var(--glass-border); border-radius: 14px; padding: 0.9rem 1.1rem; width: 100%; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .center-logo-img { max-width: 75%; object-fit: contain; margin-bottom: 1rem; }
+        .hero-tag { background: rgba(255, 255, 255, 0.95); border: 1px solid var(--glass-border); border-radius: 14px; padding: 0.9rem 1.1rem; width: 100%; text-align: center; }
 
-        /* ---------- river divider ---------- */
         .river-divider { max-width: 1180px; margin: 3rem auto 2rem; padding: 0 1.5rem; }
-        .river-path { stroke-dasharray: 6 8; animation: flow 8s linear infinite; }
-        @keyframes flow { to { stroke-dashoffset: -200; } }
-
-        /* ---------- filters ---------- */
         .filters { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 1.75rem; }
-        .pill { padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid var(--glass-border); font-size: 0.85rem; color: var(--muted); font-weight: 500; transition: all 0.2s; background: #FFFFFF; }
-        .pill:hover { border-color: var(--utb-green); color: var(--utb-green); }
+        .pill { padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid var(--glass-border); font-size: 0.85rem; color: var(--muted); background: #FFFFFF; transition: all 0.2s; }
         .pill-active { background: var(--utb-green); color: #FFFFFF; border-color: var(--utb-green); }
 
-        /* ---------- bento grid ---------- */
         .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1.25rem; }
         .bento-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
-        .venture-card { position: relative; grid-column: span 1; border-radius: 16px; overflow: hidden; border: 1px solid var(--glass-border); background: var(--ink-elevated); text-align: left; display: flex; flex-direction: column; transition: transform 0.2s ease, border-color 0.2s ease; }
+        .venture-card { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid var(--glass-border); background: var(--ink-elevated); text-align: left; display: flex; flex-direction: column; transition: all 0.2s; }
         .venture-card-big { grid-column: span 2; flex-direction: row; }
-        .venture-card:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 10px 25px -10px rgba(0,0,0,0.1); }
         .venture-card-image { width: 100%; height: 150px; background-size: cover; background-position: center; }
         .venture-card-big .venture-card-image { width: 45%; height: auto; min-height: 200px; }
         .venture-card-body { padding: 1.2rem; display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
-        .venture-card-body h3 { font-size: 1.1rem; color: var(--text); }
-        .venture-card-glow { position: absolute; width: 60px; height: 60px; border-radius: 50%; filter: blur(35px); opacity: 0.15; top: -20px; right: -20px; }
+        .venture-card-body h3 { font-size: 1.1rem; }
         .no-results { grid-column: 1 / -1; text-align: center; padding: 4rem 0; color: var(--muted); }
 
-        /* ---------- detail view ---------- */
         .detail-view { max-width: 1180px; margin: 0 auto; padding: 1.5rem; }
         .back-btn { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.85rem; margin-bottom: 1.25rem; }
-        .back-btn:hover { color: var(--utb-green); }
-        .detail-banner { position: relative; border-radius: 20px; overflow: hidden; height: 280px; border: 1px solid var(--glass-border); background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); }
+        .detail-banner { position: relative; border-radius: 20px; overflow: hidden; height: 280px; background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); }
         .detail-banner-img { width: 100%; height: 100%; object-fit: cover; }
         .detail-banner-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.7)); }
         .detail-banner-content { position: absolute; bottom: 1.5rem; left: 1.5rem; right: 1.5rem; z-index: 2; }
         
         .detail-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 2.5rem; margin-top: 2.25rem; }
-        .detail-main h2 { font-size: 1.25rem; margin-bottom: 0.8rem; margin-top: 1.75rem; color: var(--text); border-left: 3px solid var(--utb-green); padding-left: 0.5rem; }
-        .detail-main h2:first-child { margin-top: 0; }
+        .detail-main h2 { font-size: 1.25rem; margin-bottom: 0.8rem; margin-top: 1.75rem; border-left: 3px solid var(--utb-green); padding-left: 0.5rem; }
         .products-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
         .product-card { border: 1px solid var(--glass-border); border-radius: 12px; overflow: hidden; background: var(--ink-elevated); }
         .product-card-img { width: 100%; height: 120px; object-fit: cover; display: block; }
         .product-card-placeholder { display: flex; align-items: center; justify-content: center; }
         .product-card-body { padding: 0.9rem; }
-        .product-card-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
-        
-        .price { font-weight: 700; font-size: 0.95rem; }
+        .product-card-row { display: flex; justify-content: space-between; align-items: baseline; }
+        .price { font-weight: 700; }
 
         .contact-card { border: 1px solid var(--glass-border); border-radius: 16px; padding: 1.5rem; background: var(--ink-elevated); align-self: start; }
-        .contact-card h3 { font-size: 1.05rem; margin-bottom: 1rem; color: var(--text); }
-        .contact-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0; font-size: 0.9rem; color: var(--text); border-bottom: 1px solid var(--glass-border); }
-        .contact-row:hover { color: var(--accent); }
+        .contact-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0; font-size: 0.9rem; border-bottom: 1px solid var(--glass-border); }
 
-        /* ---------- register form ---------- */
         .form-view { max-width: 760px; margin: 0 auto; padding: 1.5rem; }
-        .form-view h1 { font-size: 2rem; margin-top: 0.5rem; color: var(--text); }
         .form-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 1rem; }
-        
-        .form-section-header { display: flex; justify-content: space-between; align-items: center; }
         .form-row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        
         label { display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
         .color-row { display: flex; align-items: center; gap: 0.6rem; }
-        .color-row input[type="color"] { width: 42px; height: 38px; padding: 2px; background: none; border: none; cursor: pointer; }
-        .icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; color: var(--muted); background: #FFFFFF; transition: all 0.2s; }
-        .icon-btn:hover { color: #ff6b6b; border-color: #ff6b6b; background: #fff5f5; }
+        .icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; background: #FFFFFF; }
 
         .success-state { max-width: 480px; margin: 5rem auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
-        .success-icon { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); display: flex; align-items: center; justify-content: center; color: #FFFFFF; margin-bottom: 0.75rem; }
-
-        .footer { max-width: 1180px; margin: 5rem auto 0; padding: 2.5rem 1.5rem; border-top: 1px solid var(--glass-border); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem; font-size: 0.85rem; color: var(--muted); background: var(--ink-elevated); border-radius: 12px; }
-        .footer-strong { color: var(--text); font-weight: 600; }
+        .success-icon { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); display: flex; align-items: center; justify-content: center; color: #FFFFFF; }
+        .footer { max-width: 1180px; margin: 5rem auto 0; padding: 2.5rem 1.5rem; border-top: 1px solid var(--glass-border); display: flex; justify-content: space-between; flex-wrap: wrap; background: var(--ink-elevated); border-radius: 12px; }
 
         @media (max-width: 860px) {
-          .hero { grid-template-columns: 1fr; margin-top: 1.5rem; text-align: center; }
+          .hero { grid-template-columns: 1fr; text-align: center; }
           .hero h1 { font-size: 2.2rem; }
           .search-box { margin: 1.5rem auto 0; }
-          .hero-actions { justify-content: center; }
-          .hero-visual { aspect-ratio: 16/9; }
           .bento-grid { grid-template-columns: 1fr 1fr; }
           .venture-card-big { grid-column: span 2; flex-direction: column; }
           .venture-card-big .venture-card-image { width: 100%; height: 150px; }
@@ -821,20 +786,13 @@ const [ventures, setVentures] = useState([]);
           .products-grid { grid-template-columns: 1fr; }
           .form-row.two { grid-template-columns: 1fr; }
         }
-        @media (max-width: 600px) {
-          .bento-grid { grid-template-columns: 1fr; }
-        }
       `}</style>
 
       {/* NAVBAR */}
       <nav className="navbar">
         <div className="navbar-brand" onClick={goHome} style={{ cursor: "pointer" }}>
           <div className="navbar-logo-container">
-            <img 
-              src="https://ricardomedinao.wordpress.com/wp-content/uploads/2011/12/utb_logo_verdea.png" 
-              alt="Logo Universidad Técnica de Babahoyo" 
-              className="navbar-logo-img"
-            />
+            <img src="https://ricardomedinao.wordpress.com/wp-content/uploads/2011/12/utb_logo_verdea.png" alt="UTB" className="navbar-logo-img" />
           </div>
           <div>
             <div className="navbar-name">EmprendeUTB</div>
@@ -844,61 +802,42 @@ const [ventures, setVentures] = useState([]);
         <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
           {user ? (
             <>
-              <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "var(--text)" }}>👋 Hola, {user.name}</span>
+              <span style={{ fontSize: "0.85rem", fontWeight: "600" }}>👋 {user.name}</span>
               {view === "home" && (
                 <button className="cta-btn cta-solid" onClick={handlePublishClick}>
-                  <Plus size={15} /> Registrar mi emprendimiento
+                  <Plus size={15} /> Publicar
                 </button>
               )}
-              <button className="cta-btn cta-ghost small" onClick={handleLogout}>Cerrar Sesión</button>
+              <button className="cta-btn cta-ghost small" onClick={handleLogout}>Salir</button>
             </>
           ) : (
-            view === "home" && (
-              <button className="cta-btn cta-solid" onClick={() => setView("auth")}>
-                Iniciar Sesión / Registrarse
-              </button>
-            )
+            view === "home" && <button className="cta-btn cta-solid" onClick={() => setView("auth")}>Ingresar</button>
           )}
         </div>
       </nav>
 
-      {/* VISTAS CENTRALES */}
+      {/* CONTENIDO PRINCIPAL */}
       {view === "home" && (
         <>
           <header className="hero">
             <div>
-              <h1>
-                Vitrina de <span className="hero-grad">Emprendimientos</span> de la Universidad Técnica de Babahoyo
-              </h1>
-              <p className="lead">
-                Impulsando la innovación y el comercio de los estudiantes de la
-                Universidad Técnica de Babahoyo. Explora productos y servicios con contacto directo vía WhatsApp.
-              </p>
+              <h1>Vitrina de <span className="hero-grad">Emprendimientos</span> UTB</h1>
+              <p className="lead">Explora artículos y servicios de la Facultad de Administración, Finanzas e Informática con sincronización y contacto en tiempo real.</p>
               <div className="search-box">
                 <Search size={16} className="muted" />
-                <input
-                  placeholder="Buscar comida, tecnología, servicios..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
+                <input placeholder="Buscar productos..." value={query} onChange={(e) => setQuery(e.target.value)} />
               </div>
-              <div className="hero-actions">
+              <div style={{ marginTop: "1.5rem" }}>
                 <button className="cta-btn cta-ghost" onClick={handlePublishClick}>
-                  <GraduationCap size={15} /> Soy estudiante, quiero publicar
+                  <GraduationCap size={15} /> Publicar mi negocio estudiantil
                 </button>
               </div>
             </div>
-            
             <div className="hero-visual">
-              <img 
-                src="https://ricardomedinao.wordpress.com/wp-content/uploads/2011/12/utb_logo_verdea.png" 
-                alt="Escudo Institucional UTB" 
-                className="center-logo-img"
-              />
+              <img src="https://ricardomedinao.wordpress.com/wp-content/uploads/2011/12/utb_logo_verdea.png" alt="Escudo UTB" className="center-logo-img" />
               <div className="hero-tag">
-                <div className="eyebrow" style={{ color: "var(--utb-green)" }}>Comunidad Universitaria</div>
-                <strong style={{ color: "var(--text)", display: "block", margin: "0.2rem 0" }}>{ventures.length} Emprendimientos registrados</strong>
-                <div className="muted small">Facultad de Administración, Finanzas e Informática</div>
+                <strong style={{ display: "block" }}>{ventures.length} Negocios en la nube</strong>
+                <div className="muted small">Actualizado globalmente</div>
               </div>
             </div>
           </header>
@@ -908,7 +847,7 @@ const [ventures, setVentures] = useState([]);
           <main className="shell">
             <div className="section-head">
               <h2>Vitrina comercial estudiantil</h2>
-              <span className="muted small">{filtered.length} resultado{filtered.length !== 1 ? "s" : ""}</span>
+              <span className="muted small">{filtered.length} visible(s)</span>
             </div>
 
             <div className="filters">
@@ -919,37 +858,30 @@ const [ventures, setVentures] = useState([]);
             </div>
 
             <div className="bento-grid">
-              {filtered.length === 0 && (
-                <div className="no-results">No encontramos resultados para tu búsqueda actual.</div>
+              {filtered.length === 0 ? (
+                <div className="no-results">No hay emprendimientos publicados todavía en la nube. ¡Sé el primero!</div>
+              ) : (
+                filtered.map((v, i) => (
+                  <VentureCard key={v.id} v={v} onOpen={openDetail} big={i === 0} />
+                ))
               )}
-              {filtered.map((v, i) => (
-                <VentureCard key={v.id} v={v} onOpen={openDetail} big={v.featured && i === 0} />
-              ))}
             </div>
           </main>
         </>
       )}
 
-      {view === "auth" && (
-        <AuthView onCancel={goHome} onAuthSuccess={(userData) => { setUser(userData); setView("register"); }} />
-      )}
-
-      {view === "detail" && selected && (
-        <DetailView venture={selected} onBack={goHome} currentUser={user} onEditClick={handleEditVentureClick} />
-      )}
-
-      {view === "register" && (
-        <RegisterView currentUser={user} editingVenture={editingVenture} onCancel={goHome} onSubmit={handleNewOrEditVenture} />
-      )}
+      {view === "auth" && <AuthView onCancel={goHome} onAuthSuccess={(userData) => { setUser(userData); setView("register"); }} />}
+      {view === "detail" && selected && <DetailView venture={selected} onBack={goHome} currentUser={user} onEditClick={handleEditVentureClick} />}
+      {view === "register" && <RegisterView currentUser={user} editingVenture={editingVenture} onCancel={goHome} onSubmit={handleNewOrEditVenture} />}
 
       <SupportChat />
 
       <footer className="footer">
         <div>
-          <p className="footer-strong">© {new Date().getFullYear()} Universidad Técnica de Babahoyo</p>
-          <p className="muted">Desarrollado para la Vitrina Comercial Estudiantil (FAFI)</p>
+          <p>© {new Date().getFullYear()} Universidad Técnica de Babahoyo</p>
+          <p className="muted">Vitrina Comercial Distribuida (FAFI)</p>
         </div>
       </footer>
-    </div>cd emprende-utb-real
+    </div>
   );
 }
