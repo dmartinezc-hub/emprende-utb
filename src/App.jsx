@@ -15,13 +15,17 @@ import {
   MessageSquare,
   X,
   Send,
+  Upload,
 } from "lucide-react";
 
 /* ----------------------------------------------------------------
-   EmprendeUTB — Vitrina de Emprendimientos
+   EmprendeUTB — Vitrina de Emprendimientos de la UTB
    UNIVERSIDAD TÉCNICA DE BABAHOYO
    Facultad de Administración, Finanzas e Informática · UNIVERSIDAD TÉCNICA DE BABAHOYO
    ---------------------------------------------------------------- */
+
+// Tu llave de ImgBB integrada directamente para evitar configuraciones manuales
+const IMGBB_API_KEY = "6da44aaefe21a80aa77627332d8137ee";
 
 const CATEGORIES = [
   "Alimentos",
@@ -48,7 +52,26 @@ const FACEBOOK_ICON = (props) => (
   </svg>
 );
 
-const seedVentures = [];
+/**
+ * Función que sube de forma invisible el archivo a los servidores de ImgBB
+ * y retorna la URL directa de la imagen de internet.
+ */
+const uploadToImgBB = async (file) => {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error("Error en la respuesta del servidor de ImgBB");
+  }
+
+  const result = await response.json();
+  return result.data.url; // Retorna el enlace directo final (https://ibb.co/...)
+};
 
 const emptyProduct = () => ({ id: `p-${Math.random().toString(36).slice(2)}`, name: "", price: "", desc: "", image: "" });
 const emptyForm = (currentOwner, currentEmail) => ({
@@ -196,36 +219,53 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
     return emptyForm(currentUser ? currentUser.name : "", currentUser ? currentUser.email : "");
   });
   const [done, setDone] = useState(false);
+  
+  // Estados de carga para las subidas automáticas
+  const [uploadingMain, setUploadingMain] = useState(false);
+  const [uploadingProd, setUploadingProd] = useState({});
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
   const updateProduct = (id, field, value) =>
     setForm((f) => ({ ...f, products: f.products.map((p) => (p.id === id ? { ...p, [field]: value } : p)) }));
 
-  const handleImageFile = (field, file) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      update(field, reader.result);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleProductImageFile = (id, file) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      updateProduct(id, "image", reader.result);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const addProduct = () => setForm((f) => ({ ...f, products: [...f.products, emptyProduct()] }));
   
-  // Función crítica: Permite la remoción inmediata de un producto antes de guardar
   const removeProduct = (id) => setForm((f) => ({ ...f, products: f.products.filter((p) => p.id !== id) }));
 
-  const canSubmit = form.name.trim() && form.owner.trim() && form.phone.trim();
+  // Controlador inteligente para la foto principal
+  const handleMainImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      setUploadingMain(true);
+      const onlineUrl = await uploadToImgBB(file);
+      update("image", onlineUrl);
+    } catch (err) {
+      console.error(err);
+      alert("Hubo un problema al alojar la imagen de portada.");
+    } finally {
+      setUploadingMain(false);
+    }
+  };
+
+  // Controlador inteligente para la foto de los productos individuales
+  const handleProductImageUpload = async (id, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      setUploadingProd(prev => ({ ...prev, [id]: true }));
+      const onlineUrl = await uploadToImgBB(file);
+      updateProduct(id, "image", onlineUrl);
+    } catch (err) {
+      console.error(err);
+      alert("Hubo un problema al alojar la foto de este producto.");
+    } finally {
+      setUploadingProd(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const canSubmit = form.name.trim() && form.owner.trim() && form.phone.trim() && !uploadingMain;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -245,7 +285,7 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
       <div className="success-state">
         <div className="success-icon"><Check size={28} /></div>
         <h2 style={{ color: "var(--text)" }}>{editingVenture ? "¡Cambios guardados exitosamente!" : "¡Emprendimiento registrado!"}</h2>
-        <p className="muted">Los datos y precios de {form.name} han sido actualizados en la vitrina.</p>
+        <p className="muted">Las imágenes se convirtieron en enlaces estables y seguros en la web.</p>
         <button className="cta-btn cta-solid" onClick={onCancel}>Ver la vitrina</button>
       </div>
     );
@@ -256,8 +296,8 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
       <button type="button" className="back-btn" onClick={onCancel}>
         <ArrowLeft size={16} /> Cancelar
       </button>
-      <h1 style={{ color: "var(--text)" }}>{editingVenture ? "Editar mi emprendimiento" : "Registrar mi emprendimiento"}</h1>
-      <p className="muted">Modifica o añade la información comercial de tus artículos o servicios.</p>
+      <h1>{editingVenture ? "Editar mi emprendimiento" : "Registrar mi emprendimiento"}</h1>
+      <p className="muted">Sube tus fotos directamente desde el dispositivo. El sistema generará el enlace URL de forma oculta.</p>
 
       {/* SECCIÓN: DATOS GENERALES */}
       <div className="form-section">
@@ -279,10 +319,16 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
           <textarea rows={3} value={form.description} onChange={(e) => update("description", e.target.value)} placeholder="¿Qué ofreces y qué te hace diferente?" />
         </label>
         <div className="form-row two">
+          {/* BOTÓN INTUITIVO SIN CAJA DE TEXTO PARA EL EMPRENDIMIENTO */}
           <label>
-            Subir foto / logo desde dispositivo
-            <input type="file" accept="image/*" onChange={(e) => handleImageFile("image", e.target.files[0])} style={{ background: "transparent" }} />
-            {form.image && <span style={{ fontSize: "11px", color: "var(--utb-green)" }}>✔ Imagen cargada con éxito</span>}
+            Foto o logo del Emprendimiento
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginTop: "0.2rem" }}>
+              <input type="file" accept="image/*" onChange={handleMainImageUpload} style={{ display: "none" }} id="main-image-file" />
+              <label htmlFor="main-image-file" className="cta-btn cta-ghost small" style={{ cursor: "pointer", margin: 0, width: "auto", flexDirection: "row" }}>
+                <Upload size={14} /> {uploadingMain ? "Subiendo a la web..." : "Seleccionar Imagen"}
+              </label>
+              {form.image && <span style={{ color: "var(--utb-green)", fontSize: "12px", fontWeight: "bold" }}>✓ Enlace Creado</span>}
+            </div>
           </label>
           <label>
             Color de marca institucional recomendado
@@ -329,7 +375,7 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
         </div>
       </div>
 
-      {/* SECCIÓN COMPONENTES DE PRODUCTOS (Gestiòn de Precios y Eliminación) */}
+      {/* SECCIÓN PRODUCTOS */}
       <div className="form-section">
         <div className="form-section-header" style={{ marginBottom: "1rem" }}>
           <h3 style={{ color: "var(--utb-green)" }}>Productos / Servicios en catálogo</h3>
@@ -339,7 +385,7 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
         </div>
         
         {form.products && form.products.map((p, i) => (
-          <div className="product-form-row" key={p.id} style={{ display: "flex", flexDirection: "column", gap: "0.6rem", background: "var(--ink-elevated)", padding: "1.2rem", borderRadius: "10px", marginBottom: "1rem", border: "1px solid var(--glass-border)", position: "relative" }}>
+          <div className="product-form-row" key={p.id} style={{ display: "flex", flexDirection: "column", gap: "0.6rem", background: "var(--ink-elevated)", padding: "1.2rem", borderRadius: "10px", marginBottom: "1rem", border: "1px solid var(--glass-border)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "13px", color: "var(--utb-green)", fontWeight: "bold" }}>Artículo #{i + 1}</span>
               {form.products.length > 1 && (
@@ -371,10 +417,17 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
                 Descripción corta o porción
                 <input placeholder="Ej. Tamaño personal, incluye aderezo" value={p.desc} onChange={(e) => updateProduct(p.id, "desc", e.target.value)} />
               </label>
+              
+              {/* BOTÓN INTUITIVO SIN CAJA DE TEXTO PARA CADA PRODUCTO */}
               <label>
-                Cambiar foto del artículo
-                <input type="file" accept="image/*" onChange={(e) => handleProductImageFile(p.id, e.target.files[0])} style={{ background: "transparent", padding: "4px" }} />
-                {p.image && <span style={{ fontSize: "10px", color: "var(--utb-green)", marginTop: "2px" }}>✔ Foto cargada en caché</span>}
+                Foto del Artículo
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginTop: "0.2rem" }}>
+                  <input type="file" accept="image/*" onChange={(e) => handleProductImageUpload(p.id, e)} style={{ display: "none" }} id={`prod-file-${p.id}`} />
+                  <label htmlFor={`prod-file-${p.id}`} className="cta-btn cta-ghost small" style={{ cursor: "pointer", margin: 0, width: "auto", flexDirection: "row" }}>
+                    <Upload size={14} /> {uploadingProd[p.id] ? "Subiendo..." : "Subir Foto"}
+                  </label>
+                  {p.image && <span style={{ color: "var(--utb-green)", fontSize: "12px", fontWeight: "bold" }}>✓ OK</span>}
+                </div>
               </label>
             </div>
           </div>
@@ -388,7 +441,6 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
   );
 }
 
-/* COMPONENTE DE AUTENTICACIÓN LOCAL CON NUEVAS VALIDACIONES STRICT */
 function AuthView({ onCancel, onAuthSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
@@ -479,7 +531,6 @@ function AuthView({ onCancel, onAuthSuccess }) {
   );
 }
 
-/* COMPONENTE DEL CHAT DE SOPORTE TÉCNICO INTERACTIVO */
 function SupportChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -505,8 +556,8 @@ function SupportChat() {
         responseText = "Recuerda que para registrarte el correo electrónico debe incluir obligatoriamente '@' y '.com'. Además, tu contraseña debe tener mínimo 8 letras, una letra Mayúscula y un Número.";
       } else if (userText.includes("hola") || userText.includes("buenos")) {
         responseText = "¡Hola estudiante! Cuéntame, ¿tienes algún problema con la modificación de precios, borrado de productos o el registro de tu cuenta?";
-      } else if (userText.includes("foto") || userText.includes("imagen")) {
-        responseText = "Ahora el sistema te permite seleccionar imágenes directamente desde los archivos de tu computadora o celular. No requieres enlaces de internet externos.";
+      } else if (userText.includes("foto") || userText.includes("imagen") || userText.includes("link") || userText.includes("subir")) {
+        responseText = "¡Gran noticia! Hemos automatizado la subida de fotos. Ahora solo presionas 'Seleccionar Imagen' o 'Subir Foto' desde tus archivos, el sistema sube la imagen de forma invisible a ImgBB y mete el link directamente a la base de datos.";
       }
 
       setMessages((prev) => [...prev, { id: Date.now() + 1, text: responseText, sender: "bot" }]);
@@ -527,7 +578,7 @@ function SupportChat() {
 
       {isOpen && (
         <div style={{ width: "320px", height: "420px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--glass-border)", boxShadow: "0 10px 30px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <div style={{ background: "linear-gradient(135deg, var(--utb-green), var(--utb-blue))", padding: "1rem", color: "#FFF", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ background: "linear-gradient(135deg, var(--utb-green), var(--utb-blue))", padding: "1rem", color: "#FFF", display: "flex", justifycontent: "space-between", alignItems: "center" }}>
             <div>
               <h4 style={{ color: "#FFF", fontSize: "0.95rem" }}>Soporte Técnico</h4>
               <span style={{ fontSize: "11px", opacity: 0.9 }}>FAFI - En Línea</span>
@@ -600,7 +651,6 @@ export default function App() {
   const [editingVenture, setEditingVenture] = useState(null);
   const [ventures, setVentures] = useState([]);
 
-  // Cargar datos desde la nube al abrir la página
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -644,10 +694,7 @@ export default function App() {
   
   const handleNewOrEditVenture = async (v) => {
     try {
-      // Guardar en la nube (Firestore)
       await setDoc(doc(db, "ventures", v.id), v);
-      
-      // Actualizar la pantalla del usuario de inmediato
       setVentures((vs) => {
         const exists = vs.some((item) => item.id === v.id);
         if (exists) {
@@ -712,7 +759,6 @@ export default function App() {
         .body-text { color: var(--text); line-height: 1.6; max-width: 60ch; }
         .eyebrow { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
 
-        /* ---------- shell ---------- */
         .shell { max-width: 1180px; margin: 0 auto; padding: 0 1.5rem; }
         .navbar { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; max-width: 1180px; margin: 0 auto; border-bottom: 1px solid var(--glass-border); background: var(--ink-elevated); }
         .navbar-brand { display: flex; align-items: center; gap: 0.8rem; }
@@ -732,7 +778,6 @@ export default function App() {
         .cta-btn.small { padding: 0.4rem 0.75rem; font-size: 0.78rem; }
         .cta-btn.full { width: 100%; justify-content: center; margin-top: 1rem; }
 
-        /* ---------- hero ---------- */
         .hero { max-width: 1180px; margin: 2.5rem auto 0; padding: 0 1.5rem; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2.5rem; align-items: center; }
         .hero h1 { font-size: 2.8rem; line-height: 1.1; font-weight: 700; color: var(--text); }
         .hero-grad { background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -747,18 +792,15 @@ export default function App() {
         
         .hero-tag { background: rgba(255, 255, 255, 0.95); border: 1px solid var(--glass-border); border-radius: 14px; padding: 0.9rem 1.1rem; width: 100%; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
 
-        /* ---------- river divider ---------- */
         .river-divider { max-width: 1180px; margin: 3rem auto 2rem; padding: 0 1.5rem; }
         .river-path { stroke-dasharray: 6 8; animation: flow 8s linear infinite; }
         @keyframes flow { to { stroke-dashoffset: -200; } }
 
-        /* ---------- filters ---------- */
         .filters { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 1.75rem; }
         .pill { padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid var(--glass-border); font-size: 0.85rem; color: var(--muted); font-weight: 500; transition: all 0.2s; background: #FFFFFF; }
         .pill:hover { border-color: var(--utb-green); color: var(--utb-green); }
         .pill-active { background: var(--utb-green); color: #FFFFFF; border-color: var(--utb-green); }
 
-        /* ---------- bento grid ---------- */
         .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1.25rem; }
         .bento-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
         .venture-card { position: relative; grid-column: span 1; border-radius: 16px; overflow: hidden; border: 1px solid var(--glass-border); background: var(--ink-elevated); text-align: left; display: flex; flex-direction: column; transition: transform 0.2s ease, border-color 0.2s ease; }
@@ -771,7 +813,6 @@ export default function App() {
         .venture-card-glow { position: absolute; width: 60px; height: 60px; border-radius: 50%; filter: blur(35px); opacity: 0.15; top: -20px; right: -20px; }
         .no-results { grid-column: 1 / -1; text-align: center; padding: 4rem 0; color: var(--muted); }
 
-        /* ---------- detail view ---------- */
         .detail-view { max-width: 1180px; margin: 0 auto; padding: 1.5rem; }
         .back-btn { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.85rem; margin-bottom: 1.25rem; }
         .back-btn:hover { color: var(--utb-green); }
@@ -797,7 +838,6 @@ export default function App() {
         .contact-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0; font-size: 0.9rem; color: var(--text); border-bottom: 1px solid var(--glass-border); }
         .contact-row:hover { color: var(--accent); }
 
-        /* ---------- register form ---------- */
         .form-view { max-width: 760px; margin: 0 auto; padding: 1.5rem; }
         .form-view h1 { font-size: 2rem; margin-top: 0.5rem; color: var(--text); }
         .form-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 1rem; }
