@@ -754,41 +754,123 @@ function SupportChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([
-    { id: 1, text: "¡Hola! Bienvenido al asistente inteligente de EmprendeUTB. ¿Tienes alguna consulta técnica sobre la subida de imágenes, asignación de facultades o almacenamiento en Firebase?", sender: "bot" }
+    { 
+      id: 1, 
+      text: "¡Hola! Bienvenido al soporte inteligente de EmprendeUTB. Soy tu asistente técnico de la universidad. ¿En qué te puedo colaborar hoy?", 
+      sender: "bot" 
+    }
   ]);
 
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    const userMsg = { id: Date.now(), text: input, sender: "user" };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
+  // Preguntas frecuentes para agilizar la interacción del usuario
+  const QUICK_QUESTIONS = [
+    { label: "📸 Error al subir imágenes", value: "Tengo un problema al subir la imagen de mi producto o portada" },
+    { label: "🏫 ¿Es para toda la UTB?", value: "Quiero saber si mi facultad puede participar en el proyecto" },
+    { label: "💾 ¿Cómo se guardan los datos?", value: "Cómo funciona el almacenamiento con Firebase" }
+  ];
+
+  const processBotResponse = (userText) => {
+    const text = userText.toLowerCase();
     
+    if (text.includes("imagen") || text.includes("foto") || text.includes("subir") || text.includes("error")) {
+      return "💡 **Consejo Técnico:** Para evitar el error de cuotas en Firebase, procesamos las imágenes a través de ImgBB. Si te da error, asegúrate de que el archivo sea JPG/PNG y no pese más de 5MB. ¡El sistema generará un enlace CDN optimizado automáticamente!";
+    }
+    if (text.includes("fafi") || text.includes("facultad") || text.includes("utb") || text.includes("toda")) {
+      return "🏫 **Alcance Institucional:** ¡El proyecto es de toda la UTB! Está habilitado el registro para la FAFI, FACS, FCJSE y FACIAG, incluyendo sus respectivos predios y campus. ¡Buscamos integrar a toda la comunidad universitaria!";
+    }
+    if (text.includes("guardar") || text.includes("firebase") || text.includes("base de datos") || text.includes("sincronizar")) {
+      return "⚡ **Infraestructura:** Al pulsar 'Publicar', el formulario valida que no existan arreglos corruptos u objetos vacíos y los guarda en las colecciones seguras de Firestore en tiempo real. ¡Tu vitrina se actualiza al instante!";
+    }
+    if (text.includes("precio") || text.includes("producto") || text.includes("dinero")) {
+      return "💵 **Gestión de Catálogo:** Recuerda ingresar valores numéricos en el campo de precio (ej. 1.50). El sistema formateará el valor automáticamente con el signo de dólar e incluirá la descripción de tus variantes.";
+    }
+    
+    return "Entendido. Tu consulta sobre el ecosistema comercial UTB ha sido registrada. Nuestro equipo técnico revisará los logs de Firebase si experimentas algún fallo en el despliegue.";
+  };
+
+  const handleSendMessage = (textToSend) => {
+    if (!textToSend.trim()) return;
+    
+    const userMsg = { id: Date.now(), text: textToSend, sender: "user" };
+    setMessages((prev) => [...prev, userMsg]);
+
     setTimeout(() => {
+      const botReplyText = processBotResponse(textToSend);
       setMessages((prev) => [...prev, { 
         id: Date.now() + 1, 
-        text: "Los datos de los productos y enlaces CDN optimizados se guardan en tiempo real en las colecciones seguras de Firestore.", 
+        text: botReplyText, 
         sender: "bot" 
       }]);
-    }, 800);
+    }, 600);
+  };
+
+  const onSubmitForm = (e) => {
+    e.preventDefault();
+    handleSendMessage(input);
+    setInput("");
   };
 
   return (
     <div className="support-chat-container">
+      <style>{`
+        .support-floating-bubble { 
+          width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+          background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); position: fixed; bottom: 24px; right: 24px; 
+          z-index: 999; box-shadow: 0 4px 20px rgba(13,71,43,0.35); transform: scale(1); transition: transform 0.2s ease;
+        }
+        .support-floating-bubble:hover { transform: scale(1.08); }
+        
+        .support-chat-window { 
+          width: 360px; height: 500px; background: var(--ink-elevated); border-radius: 20px; border: 1px solid var(--glass-border); 
+          box-shadow: 0 12px 40px rgba(0,0,0,0.15); position: fixed; bottom: 24px; right: 24px; z-index: 1000; 
+          display: flex; flex-direction: column; overflow: hidden; animation: chatAppear 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes chatAppear { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .chat-window-header { 
+          background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); padding: 1.2rem; color: #FFFFFF; 
+          display: flex; justify-content: space-between; align-items: center; 
+        }
+        .chat-header-titles { display: flex; flex-direction: column; gap: 0.1rem; }
+        .chat-main-title { font-size: 0.95rem; font-weight: 700; color: #FFFFFF; }
+        .chat-status-sub { font-size: 0.72rem; opacity: 0.9; display: flex; align-items: center; gap: 0.3rem; }
+        .status-dot { width: 7px; height: 7px; background: #25D366; border-radius: 50%; display: inline-block; animation: pulseGlow 1.5s infinite; }
+        @keyframes pulseGlow { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+        
+        .chat-messages-viewport { flex: 1; padding: 1.2rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.9rem; }
+        .chat-bubble { max-width: 85%; padding: 0.7rem 0.95rem; border-radius: 16px; font-size: 0.85rem; line-height: 1.4; word-break: break-word; }
+        .bubble-user { align-self: flex-end; background: var(--utb-green); color: #FFFFFF; border-bottom-right-radius: 2px; box-shadow: 0 2px 8px rgba(13,71,43,0.15); }
+        .bubble-bot { align-self: flex-start; background: rgba(0,0,0,0.05); color: var(--text); border-bottom-left-radius: 2px; border: 1px solid var(--glass-border); }
+        .dark-mode-active .bubble-bot { background: rgba(255,255,255,0.06); }
+        
+        .chat-quick-replies-area { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.5rem 1rem; background: rgba(0,0,0,0.01); border-top: 1px solid var(--glass-border); }
+        .quick-reply-btn { 
+          text-align: left; padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); 
+          background: var(--ink-elevated); color: var(--text); font-size: 0.78rem; font-weight: 500; width: 100%;
+          transition: all 0.15s ease; cursor: pointer;
+        }
+        .quick-reply-btn:hover { border-color: var(--utb-green); color: var(--utb-green); background: rgba(13,71,43,0.02); }
+        
+        .chat-input-row { display: flex; padding: 0.75rem; border-top: 1px solid var(--glass-border); gap: 0.5rem; background: var(--ink-elevated); align-items: center; }
+        .chat-input-row input { font-size: 0.85rem; padding: 0.6rem 0.85rem; border-radius: 999px; }
+        .chat-submit-arrow { width: 36px; height: 36px; border-radius: 50%; padding: 0; justify-content: center; flex-shrink: 0; }
+      `}</style>
+
       {!isOpen && (
-        <button onClick={() => setIsOpen(true)} className="support-floating-bubble">
+        <button onClick={() => setIsOpen(true)} className="support-floating-bubble" aria-label="Abrir mesa de ayuda">
           <MessageSquare size={24} color="#FFF" />
         </button>
       )}
+
       {isOpen && (
         <div className="support-chat-window">
           <div className="chat-window-header">
             <div className="chat-header-titles">
-              <span className="chat-main-title">Asistencia Técnica UTB</span>
-              <span className="chat-status-sub">Soporte en línea</span>
+              <span className="chat-main-title">Mesa de Soporte Tecnológico UTB</span>
+              <span className="chat-status-sub"><span className="status-dot" /> Asistente Universitario en línea</span>
             </div>
-            <button onClick={() => setIsOpen(false)} style={{ color: "#FFF", background: "none", border: "none", cursor: "pointer" }}><X size={18} /></button>
+            <button onClick={() => setIsOpen(false)} style={{ color: "#FFF", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}><X size={18} /></button>
           </div>
+
           <div className="chat-messages-viewport">
             {messages.map((m) => (
               <div 
@@ -799,9 +881,30 @@ function SupportChat() {
               </div>
             ))}
           </div>
-          <form onSubmit={handleSendMessage} className="chat-input-row">
-            <input placeholder="Escribe tu mensaje aquí..." value={input} onChange={(e) => setInput(e.target.value)} />
-            <button type="submit" className="cta-btn cta-solid chat-submit-arrow"><Send size={12} /></button>
+
+          {/* SUGERENCIAS INTERACTIVAS (QUICK REPLIES) */}
+          <div className="chat-quick-replies-area">
+            {QUICK_QUESTIONS.map((q, idx) => (
+              <button 
+                key={idx} 
+                type="button" 
+                className="quick-reply-btn"
+                onClick={() => handleSendMessage(q.value)}
+              >
+                {q.label}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={onSubmitForm} className="chat-input-row">
+            <input 
+              placeholder="Escribe tu consulta sobre el sistema..." 
+              value={input} 
+              onChange={(e) => setInput(e.target.value)} 
+            />
+            <button type="submit" className="cta-btn cta-solid chat-submit-arrow">
+              <Send size={14} />
+            </button>
           </form>
         </div>
       )}
