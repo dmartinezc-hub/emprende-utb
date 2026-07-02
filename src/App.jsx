@@ -1204,33 +1204,17 @@ export default function App() {
         .success-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); display: flex; align-items: center; justify-content: center; color: #FFFFFF; }
         .font-small { font-size: 0.85rem; }
 
-        @media (max-width:860px){
-
-.hero{
-   ...
-}
-
-.stats-grid{
-   ...
-}
-
-/* NUEVO */
-
-.hamburger-btn{
-   display:block;
-}
-
-.mobile-menu{
-   display:flex;
-   flex-direction:column;
-   gap:12px;
-}
-
-.navbar-actions-group > div{
-   display:none;
-}
-
-}
+        @media (max-width: 860px) {
+          .hero { grid-template-columns: 1fr; text-align: center; margin-top: 1.5rem; }
+          .hero h1 { font-size: 2.2rem; }
+          .hero p.lead { margin: 1rem auto 0; }
+          .search-box { margin: 1.5rem auto 0; }
+          .bento-grid { grid-template-columns: 1fr; }
+          .detail-grid { grid-template-columns: 1fr; }
+          .products-grid { grid-template-columns: 1fr; }
+          .form-row.two, .form-row.three { grid-template-columns: 1fr; }
+          .stats-grid { grid-template-columns: 1fr; }
+        }
       `}</style>
 
       <nav className="navbar">
@@ -1271,49 +1255,7 @@ export default function App() {
             view === "home" && <button className="cta-btn cta-solid" onClick={() => setView("auth")}>Acceso Emprendedor</button>
           )}
         </div>
-        {mobileMenu && user && (
-  <div className="mobile-menu">
-
-    <div className="mobile-user">
-      👤 {user.name}
-    </div>
-
-    {view === "home" && (
-      <button
-        className="cta-btn cta-solid"
-        onClick={() => {
-          setView("register");
-          setMobileMenu(false);
-        }}
-      >
-        <Plus size={16} />
-        Registrar Comercio
-      </button>
-    )}
-
-    <button
-      className="cta-btn cta-ghost"
-      onClick={() => {
-        setDarkMode(!darkMode);
-      }}
-    >
-      {darkMode ? "☀️ Tema Claro" : "🌙 Tema Oscuro"}
-    </button>
-
-    <button
-      className="cta-btn cta-ghost"
-      onClick={() => {
-        localStorage.removeItem("utb_logged_user");
-        setUser(null);
-        setMobileMenu(false);
-        goHome();
-      }}
-    >
-      🚪 Salir
-    </button>
-
-  </div>
-)}
+        
       </nav>
 
       {view === "home" && (
