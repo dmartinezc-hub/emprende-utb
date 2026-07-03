@@ -212,7 +212,7 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
   const [quantities, setQuantities] = useState({});
 
   const ratingAvg = useMemo(() => {
-    if (!venture.reviews || venture.reviews.length === 0) return 0;
+    if (!venture || !venture.reviews || venture.reviews.length === 0) return 0;
     const sum = venture.reviews.reduce((acc, r) => acc + r.rating, 0);
     return (sum / venture.reviews.length).toFixed(1);
   }, [venture.reviews]);
@@ -243,12 +243,15 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
       .filter(item => item.quantity > 0);
   }, [venture.products, quantities]);
 
-  // Calcular el precio total acumulado de la cotización
+  // Calcular el precio total acumulado de la cotización de forma segura
   const totalQuote = useMemo(() => {
-    return selectedItems.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0);
+    return selectedItems.reduce((acc, item) => {
+      const priceValue = !isNaN(parseFloat(item.price)) ? parseFloat(item.price) : 0;
+      return acc + (priceValue * item.quantity);
+    }, 0);
   }, [selectedItems]);
 
-  // Función optimizada para móviles que registra la métrica y redirige inmediatamente
+  // Función optimizada para móviles que redirige inmediatamente
   const handlePlaceOrder = async () => {
     if (selectedItems.length === 0) {
       alert("Por favor, selecciona al menos un producto usando los botones (+) antes de realizar el pedido.");
@@ -259,8 +262,9 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
     let message = `¡Hola! Me interesa realizar un pedido en tu emprendimiento *${venture.name}* a través de la plataforma EmprendeUTB. Aquí tienes el detalle:\n\n`;
     
     selectedItems.forEach(item => {
-      const subtotal = (Number(item.price) * item.quantity).toFixed(2);
-      message += `• *${item.quantity}x* ${item.name} ($${Number(item.price).toFixed(2)} c/u) → Subtotal: $${subtotal}\n`;
+      const priceValue = !isNaN(parseFloat(item.price)) ? parseFloat(item.price) : 0;
+      const subtotal = (priceValue * item.quantity).toFixed(2);
+      message += `• *${item.quantity}x* ${item.name} ($${priceValue.toFixed(2)} c/u) → Subtotal: $${subtotal}\n`;
     });
 
     message += `\n💰 *Total de la Cotización:* $${totalQuote.toFixed(2)}`;
@@ -268,15 +272,14 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
 
     const encodedMessage = encodeURIComponent(message);
     
-    // Limpiamos el número de teléfono asegurándonos de quitar espacios, guiones y el 0 inicial
+    // Limpiamos el número de teléfono removiendo espacios, guiones y el 0 inicial
     const cleanPhone = venture.phone.trim().replace(/[- ]/g, "").replace(/^0/, "");
     const whatsappUrl = `https://wa.me/593${cleanPhone}?text=${encodedMessage}`;
 
-    // 2. Ejecutamos la redirección INMEDIATAMENTE para que el móvil no la bloquee
-    // En móviles cambia la pestaña actual o abre la app de WhatsApp directamente de forma nativa
+    // 2. Redirección instantánea sin demoras (evita el bloqueo de pop-ups en celulares)
     window.location.href = whatsappUrl;
 
-    // 3. Registramos la métrica analítica en Firebase en segundo plano sin retrasar el viaje del cliente
+    // 3. Registramos la métrica analítica en segundo plano
     try {
       const docRef = doc(db, "ventures", venture.id);
       updateDoc(docRef, { whatsappClicks: increment(1) });
@@ -399,9 +402,8 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
                           <div className="product-card-row">
                             <h4>{p.name}</h4>
                             <span className="price" style={{ color: venture.color }}>
-                            <DollarSign size={14} style={{ display: "inline", marginRight: "-2px" }} />
-                            {/* Validamos si el precio existe y es convertible; si no, por defecto muestra 0.00 */}
-                            {!isNaN(parseFloat(p.price)) ? Number(p.price).toFixed(2) : "0.00"}
+                              <DollarSign size={14} style={{ display: "inline", marginRight: "-2px" }} />
+                              {!isNaN(parseFloat(p.price)) ? Number(p.price).toFixed(2) : "0.00"}
                             </span>
                           </div>
                           <p className="muted small product-description-text">{p.desc || "Sin especificaciones."}</p>
@@ -416,7 +418,7 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
                             type="button" 
                             className="pill" 
                             onClick={() => handleDecrease(p.id)}
-                            style={{ width: "28px", height: "28px", padding: 0, display: "flex", alignItems: "center", justifycontent: "center", minWidth: "auto", fontWeight: "bold" }}
+                            style={{ width: "28px", height: "28px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", minWidth: "auto", fontWeight: "bold" }}
                           >
                             -
                           </button>
@@ -519,21 +521,24 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
             <h3 style={{ fontSize: "1.1rem", marginBottom: "0.75rem" }}>Resumen del Pedido</h3>
             
             {selectedItems.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeigth: "180px", overflowY: "auto", margin: "0.75rem 0", paddingRight: "4px" }}>
-                {selectedItems.map(item => (
-                  <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem" }}>
-                    <span className="muted" style={{ maxWidth: "75%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      <strong>{item.quantity}x</strong> {item.name}
-                    </span>
-                    <strong style={{ color: "var(--text)" }}>${(Number(item.price) * item.quantity).toFixed(2)}</strong>
-                  </div>
-                ))}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: "180px", overflowY: "auto", margin: "0.75rem 0", paddingRight: "4px" }}>
+                {selectedItems.map(item => {
+                  const priceValue = !isNaN(parseFloat(item.price)) ? parseFloat(item.price) : 0;
+                  return (
+                    <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem" }}>
+                      <span className="muted" style={{ maxWidth: "75%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <strong>{item.quantity}x</strong> {item.name}
+                      </span>
+                      <strong style={{ color: "var(--text)" }}>${(priceValue * item.quantity).toFixed(2)}</strong>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="muted font-small" style={{ margin: "1rem 0", fontStyle: "italic" }}>No has añadido artículos a tu cotización.</p>
             )}
 
-            <div style={{ display: "flex", justifycontent: "space-between", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px dashed var(--glass-border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px dashed var(--glass-border)" }}>
               <span style={{ fontSize: "0.9rem", fontWeight: "600" }}>Total Estimado:</span>
               <strong style={{ fontSize: "1.3rem", color: venture.color }}>${totalQuote.toFixed(2)}</strong>
             </div>
@@ -551,10 +556,12 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
                 marginTop: "1.25rem",
                 fontWeight: "700",
                 width: "100%",
+                display: "flex",
+                alignItems: "center",
                 justifyContent: "center"
               }}
             >
-              <Phone size={16} /> Realizar Pedido por WhatsApp
+              <Phone size={16} style={{ marginRight: "6px", display: "inline-block", verticalAlign: "middle" }} /> Realizar Pedido por WhatsApp
             </button>
           </div>
 
@@ -563,7 +570,8 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
             <span className="verified-tag"><Award size={12} /> Emprendedor UTB</span>
           </div>
           
-          <a className="contact-row" onClick={handleWhatsAppClick} href={`https://wa.me/593${venture.phone.replace(/^0/, "")}`} target="_blank" rel="noreferrer">
+          {/* Enlaces de Redes Sociales Directos y Seguros */}
+          <a className="contact-row" href={`https://wa.me/593${venture.phone.trim().replace(/[- ]/g, "").replace(/^0/, "")}`} target="_blank" rel="noreferrer">
             <div className="contact-icon-bg"><Phone size={14} /></div>
             <div className="contact-info-text">
               <span className="contact-label">WhatsApp de Contacto</span>
@@ -600,22 +608,12 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
               </div>
             </a>
           )}
-          
-          <a 
-            className="cta-btn cta-solid full conversion-button" 
-            onClick={handleWhatsAppClick} 
-            style={{ background: venture.color, color: "#FFFFFF", marginTop: "1rem" }} 
-            href={`https://wa.me/593${venture.phone.replace(/^0/, "")}`} 
-            target="_blank" 
-            rel="noreferrer"
-          >
-            Realizar Pedido Inmediato
-          </a>
         </aside>
       </div>
     </div>
   );
 }
+      
 
 function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
   const [form, setForm] = useState(() => {
