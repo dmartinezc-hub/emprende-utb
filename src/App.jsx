@@ -248,24 +248,14 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
     return selectedItems.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0);
   }, [selectedItems]);
 
-  const handleWhatsAppClick = async () => {
-    try {
-      const docRef = doc(db, "ventures", venture.id);
-      await updateDoc(docRef, { whatsappClicks: increment(1) });
-    } catch (e) { 
-      console.error("Error al registrar click analítico:", e); 
-    }
-  };
-
-  // Función para construir el mensaje y redireccionar al WhatsApp del emprendedor
+  // Función optimizada para móviles que registra la métrica y redirige inmediatamente
   const handlePlaceOrder = async () => {
     if (selectedItems.length === 0) {
       alert("Por favor, selecciona al menos un producto usando los botones (+) antes de realizar el pedido.");
       return;
     }
 
-    await handleWhatsAppClick();
-
+    // 1. Preparamos el mensaje estructurado de la cotización
     let message = `¡Hola! Me interesa realizar un pedido en tu emprendimiento *${venture.name}* a través de la plataforma EmprendeUTB. Aquí tienes el detalle:\n\n`;
     
     selectedItems.forEach(item => {
@@ -277,9 +267,22 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
     message += `\n📍 *Punto de Entrega sugerido:* ${venture.location || "Campus UTB"}`;
 
     const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/593${venture.phone.replace(/^0/, "")}?text=${encodedMessage}`;
     
-    window.open(whatsappUrl, "_blank", "noreferrer");
+    // Limpiamos el número de teléfono asegurándonos de quitar espacios, guiones y el 0 inicial
+    const cleanPhone = venture.phone.trim().replace(/[- ]/g, "").replace(/^0/, "");
+    const whatsappUrl = `https://wa.me/593${cleanPhone}?text=${encodedMessage}`;
+
+    // 2. Ejecutamos la redirección INMEDIATAMENTE para que el móvil no la bloquee
+    // En móviles cambia la pestaña actual o abre la app de WhatsApp directamente de forma nativa
+    window.location.href = whatsappUrl;
+
+    // 3. Registramos la métrica analítica en Firebase en segundo plano sin retrasar el viaje del cliente
+    try {
+      const docRef = doc(db, "ventures", venture.id);
+      updateDoc(docRef, { whatsappClicks: increment(1) });
+    } catch (e) { 
+      console.error("Error al registrar click analítico:", e); 
+    }
   };
 
   const handleAddReview = async (e) => {
