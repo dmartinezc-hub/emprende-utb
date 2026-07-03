@@ -1141,6 +1141,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
+// REEMPLAZA DESDE AQUÍ HASTA EL FINAL ABSOLUTO DEL ARCHIVO
+
 export default function App() {
   const [view, setView] = useState("home");
   const [activeCategory, setActiveCategory] = useState("Todas");
@@ -1237,7 +1239,6 @@ export default function App() {
         input:focus, select:focus, textarea:focus { border-color: var(--utb-green); }
         .shell { max-width: 1180px; margin: 0 auto; padding: 0 1.5rem; }
         
-        /* SOLUCIÓN DE BOTONES RÚSTICOS Y SELECTORES INTERNOS */
         button, .back-btn, .cta-btn, .pill {
           font-family: 'Inter', sans-serif;
           outline: none;
@@ -1273,7 +1274,6 @@ export default function App() {
         .navbar-faculty-subtitle { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: var(--muted); }
         .navbar-actions-group { display: flex; align-items: center; gap: 1.2rem; }
         
-        /* ARQUITECTURA DE BOTONES MODERNA */
         .cta-btn { padding: 0.65rem 1.25rem; border-radius: 999px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid transparent; }
         .cta-solid { background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); color: #FFFFFF !important; box-shadow: 0 4px 14px rgba(13, 71, 43, 0.2); transition: all 0.2s ease; }
         .cta-solid:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(13, 71, 43, 0.35); }
@@ -1421,20 +1421,94 @@ export default function App() {
         .success-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); display: flex; align-items: center; justify-content: center; color: #FFFFFF; }
         .font-small { font-size: 0.85rem; }
 
+        /* --- ARREGLO GLOBAL PARA PANTALLA EN BLANCO Y DESBORDE RESPONSIVO --- */
+        html, body, #root, .app-root {
+          max-width: 100% !important;
+          width: 100% !important;
+          overflow-x: hidden !important;
+        }
+
+        /* --- CONTROL DISPOSITIVOS MÓVILES (MÁXIMO 860px) --- */
         @media (max-width: 860px) {
-          .hero { grid-template-columns: 1fr; text-align: center; margin-top: 1.5rem; }
+          .navbar {
+            position: relative !important;
+            padding: 1rem 1.5rem !important;
+          }
+
+          /* Hace visible el botón hamburguesa en móviles */
+          .hamburger-btn {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 8px;
+            z-index: 100001;
+          }
+
+          /* Oculta y transforma el contenedor de acciones en un panel flotante */
+          .navbar-actions-group {
+            display: none !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            position: absolute !important;
+            top: 100% !important;
+            right: 1.5rem !important;
+            left: 1.5rem !important;
+            background: var(--ink-elevated) !important;
+            border: 1px solid var(--glass-border) !important;
+            border-radius: 16px !important;
+            padding: 1.5rem !important;
+            gap: 1rem !important;
+            z-index: 100000 !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+          }
+
+          /* Muestra el panel cuando el estado mobileMenu sea true */
+          .navbar-actions-group.mobile-open {
+            display: flex !important;
+          }
+
+          .user-nav-container {
+            flex-direction: column !important;
+            width: 100% !important;
+            gap: 1rem !important;
+            align-items: center !important;
+          }
+
+          .navbar-actions-group .cta-btn,
+          .navbar-actions-group .icon-btn {
+            width: 100% !important;
+            justify-content: center !important;
+            padding: 0.75rem !important;
+          }
+
+          /* --- RESPONSIVE DE ELEMENTOS DE LA VITRINA --- */
+          .hero { grid-template-columns: 1fr; text-align: center; margin-top: 1.5rem; gap: 2rem; }
           .hero h1 { font-size: 2.2rem; }
           .hero p.lead { margin: 1rem auto 0; }
-          .search-box { margin: 1.5rem auto 0; }
+          .search-box { margin: 1.5rem auto 0; width: 100% !important; max-width: 100% !important; }
           .bento-grid { grid-template-columns: 1fr; }
-          .detail-grid { grid-template-columns: 1fr; }
+          .detail-grid { grid-template-columns: 1fr; gap: 2rem; }
           .products-grid { grid-template-columns: 1fr; }
           .form-row.two, .form-row.three { grid-template-columns: 1fr; }
           .stats-grid { grid-template-columns: 1fr; }
+          .shell { padding: 0 12px !important; }
+        }
+
+        /* Oculta por defecto el botón hamburguesa en computadoras */
+        @media (min-width: 861px) {
+          .hamburger-btn {
+            display: none !important;
+          }
         }
       `}</style>
 
-      <nav className="navbar">
+      {/* NAV BAR PREPARADO CON MENÚ HAMBURGUESA EXTRACTO */}
+      <nav className="navbar" style={{ position: 'relative' }}>
         <div className="navbar-brand-cluster" onClick={goHome} style={{ cursor: "pointer" }}>
           <img 
             src="https://ricardomedinao.wordpress.com/wp-content/uploads/2011/12/utb_logo_verdea.png" 
@@ -1446,35 +1520,40 @@ export default function App() {
             <span className="navbar-faculty-subtitle">Universidad Técnica de Babahoyo</span>
           </div>
         </div>
-        <div className="navbar-actions-group">
 
-  {/* Botón hamburguesa (solo móvil) */}
-  <button
-    className="hamburger-btn"
-    onClick={() => setMobileMenu(!mobileMenu)}
-  >
-    ☰
-  </button>
-          <button onClick={() => setDarkMode(!darkMode)} className="icon-btn" aria-label="Cambiar tema">
+        {/* BOTÓN HAMBURGUESA: Fuera del contenedor para que no se oculte a sí mismo */}
+        <button
+          className="hamburger-btn"
+          onClick={() => setMobileMenu(!mobileMenu)}
+          type="button"
+          aria-label="Alternar menú"
+        >
+          {mobileMenu ? <X size={24} /> : <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>}
+        </button>
+
+        {/* CONTENEDOR DE ACCIONES DINÁMICO */}
+        <div className={`navbar-actions-group ${mobileMenu ? "mobile-open" : ""}`}>
+          <button onClick={() => { setDarkMode(!darkMode); setMobileMenu(false); }} className="icon-btn" aria-label="Cambiar tema">
             {darkMode ? <Sun size={17} style={{ color: "#FFB000" }} /> : <Moon size={17} />}
           </button>
+          
           {user ? (
-            <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+            <div className="user-nav-container" style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
               <span className="font-small" style={{ fontWeight: "700" }}>👤 {user.name}</span>
               {view === "home" && (
-                <button className="cta-btn cta-solid small" onClick={() => setView("register")}>
+                <button className="cta-btn cta-solid small" onClick={() => { setView("register"); setMobileMenu(false); }}>
                   <Plus size={14} /> Registrar Comercio
                 </button>
               )}
-              <button className="cta-btn cta-ghost small" onClick={() => { localStorage.removeItem("utb_logged_user"); setUser(null); goHome(); }}>Salir</button>
+              <button className="cta-btn cta-ghost small" onClick={() => { localStorage.removeItem("utb_logged_user"); setUser(null); setMobileMenu(false); goHome(); }}>Salir</button>
             </div>
           ) : (
-            view === "home" && <button className="cta-btn cta-solid" onClick={() => setView("auth")}>Acceso Emprendedor</button>
+            view === "home" && <button className="cta-btn cta-solid" onClick={() => { setView("auth"); setMobileMenu(false); }}>Acceso Emprendedor</button>
           )}
         </div>
-        
       </nav>
 
+      {/* VISTA HOME */}
       {view === "home" && (
         <div className="shell" style={{ marginTop: "2rem" }}>
           <header className="hero">
@@ -1542,6 +1621,7 @@ export default function App() {
         </div>
       )}
 
+      {/* OTRAS VISTAS CONDICIONALES */}
       {view === "auth" && (
         <AuthView onCancel={goHome} onAuthSuccess={(u) => { setUser(u); setView("register"); }} />
       )}
