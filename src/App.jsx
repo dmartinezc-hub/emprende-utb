@@ -399,8 +399,9 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
                           <div className="product-card-row">
                             <h4>{p.name}</h4>
                             <span className="price" style={{ color: venture.color }}>
-                              <DollarSign size={14} style={{ display: "inline", marginRight: "-2px" }} />
-                              {Number(p.price).toFixed(2)}
+                            <DollarSign size={14} style={{ display: "inline", marginRight: "-2px" }} />
+                            {/* Validamos si el precio existe y es convertible; si no, por defecto muestra 0.00 */}
+                            {!isNaN(parseFloat(p.price)) ? Number(p.price).toFixed(2) : "0.00"}
                             </span>
                           </div>
                           <p className="muted small product-description-text">{p.desc || "Sin especificaciones."}</p>
