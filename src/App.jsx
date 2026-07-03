@@ -813,81 +813,104 @@ function SupportChat() {
     <div className="support-chat-container">
       <style>{`
         /* --- ARREGLO GLOBAL PARA PANTALLA EN BLANCO Y DESBORDE RESPONSIVO --- */
-        html, body, #root, .app-container {
-          max-width: 100% !important;
-          width: 100% !important;
-          overflow-x: hidden !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          box-sizing: border-box !important;
-        }
+html, body, #root, .app-container {
+  max-width: 100% !important;
+  width: 100% !important;
+  overflow-x: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
 
-        *, *:before, *:after {
-          box-sizing: inherit !important;
-        }
+*, *:before, *:after {
+  box-sizing: inherit !important;
+}
 
-        .shell, .content-viewport, .home-view, .form-view, .detail-view {
-          width: 100% !important;
-          max-width: 100% !important;
-          padding: 12px !important;
-          overflow-x: hidden !important;
-          box-sizing: border-box !important;
-        }
+.shell, .content-viewport, .home-view, .form-view, .detail-view {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 12px !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+}
 
-        .search-box, .search-bar-wrapper, .search-box input {
-          max-width: 100% !important;
-          width: 100% !important;
-          margin-left: 0 !important;
-          margin-right: 0 !important;
-          box-sizing: border-box !important;
-        }
+.search-box, .search-bar-wrapper, .search-box input {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
 
-        @media (max-width: 768px) {
-          .filters-section-bento, .sidebar-panel, .bento-grid, .products-grid, .detail-grid {
-            display: flex !important;
-            flex-direction: column !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            padding: 0 !important;
-            gap: 1rem !important;
-          }
+@media (max-width: 768px) {
+    /* --- CORRECCIÓN DE LA CABECERA Y EL MENÚ DE ACCIONES --- */
+    .main-header {
+      padding: 0.8rem !important;
+      flex-direction: column !important;
+      gap: 1rem !important;
+      align-items: center !important;
+      text-align: center !important;
+      width: 100% !important;
+    }
 
-          .pills-flexbox, .filters {
-            display: flex !important;
-            flex-wrap: wrap !important;
-            gap: 6px !important;
-            width: 100% !important;
-          }
+    .header-actions {
+      display: flex !important;
+      flex-wrap: wrap !important; /* Permite que los botones bajen limpiamente si no alcanzan */
+      gap: 8px !important;
+      width: 100% !important;
+      justify-content: center !important;
+    }
 
-          .venture-card, .product-card, .detail-banner, .contact-card, .review-form {
-            width: 100% !important;
-            max-width: 100% !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            box-sizing: border-box !important;
-          }
+    .header-actions .cta-btn {
+      flex: 1 !important; /* Hace que los botones del menú ocupen el mismo ancho en móvil */
+      min-width: 130px !important;
+      justify-content: center !important;
+      padding: 0.6rem !important;
+      font-size: 0.85rem !important;
+    }
 
-          h1 {
-            font-size: 1.6rem !important;
-          }
-          
-          .main-header, .hero {
-            padding: 0.8rem !important;
-            flex-direction: column !important;
-            gap: 0.8rem !important;
-            align-items: flex-start !important;
-          }
-          .header-actions {
-            width: 100% !important;
-            justify-content: space-between !important;
-          }
-          
-          .support-chat-window {
-            width: calc(100% - 32px) !important;
-            right: 16px !important;
-            bottom: 85px !important;
-          }
-        }
+    /* --- CONTENEDORES INTERNOS --- */
+    .filters-section-bento, .sidebar-panel, .bento-grid, .products-grid, .detail-grid {
+      display: flex !important;
+      flex-direction: column !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 0 !important;
+      gap: 1rem !important;
+    }
+
+    .pills-flexbox, .filters {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 6px !important;
+      width: 100% !important;
+    }
+
+    .venture-card, .product-card, .detail-banner, .contact-card, .review-form {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    h1 {
+      font-size: 1.6rem !important;
+    }
+
+    .hero {
+      padding: 0.8rem !important;
+      flex-direction: column !important;
+      gap: 0.8rem !important;
+      align-items: flex-start !important;
+    }
+
+    .support-chat-window {
+      width: calc(100% - 32px) !important;
+      right: 16px !important;
+      bottom: 85px !important;
+    }
+  }
 
         /* --- ESTILOS DE SOPORTE ORIGINALES PRESERVADOS --- */
         .support-floating-bubble {
