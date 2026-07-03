@@ -208,11 +208,45 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
   const [comment, setComment] = useState("");
   const [reviewerName, setReviewerName] = useState(currentUser ? currentUser.name : "");
 
+  // Estado para controlar las cantidades de cada producto en el carrito
+  const [quantities, setQuantities] = useState({});
+
   const ratingAvg = useMemo(() => {
     if (!venture.reviews || venture.reviews.length === 0) return 0;
     const sum = venture.reviews.reduce((acc, r) => acc + r.rating, 0);
     return (sum / venture.reviews.length).toFixed(1);
   }, [venture.reviews]);
+
+  // Funciones para incrementar y decrementar cantidades
+  const handleIncrease = (productId) => {
+    setQuantities(prev => ({
+      ...prev,
+      [productId]: (prev[productId] || 0) + 1
+    }));
+  };
+
+  const handleDecrease = (productId) => {
+    setQuantities(prev => ({
+      ...prev,
+      [productId]: Math.max(0, (prev[productId] || 0) - 1)
+    }));
+  };
+
+  // Obtener la lista de productos seleccionados con cantidad mayor a cero
+  const selectedItems = useMemo(() => {
+    if (!venture.products) return [];
+    return venture.products
+      .map(p => ({
+        ...p,
+        quantity: quantities[p.id] || 0
+      }))
+      .filter(item => item.quantity > 0);
+  }, [venture.products, quantities]);
+
+  // Calcular el precio total acumulado de la cotización
+  const totalQuote = useMemo(() => {
+    return selectedItems.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0);
+  }, [selectedItems]);
 
   const handleWhatsAppClick = async () => {
     try {
@@ -221,6 +255,31 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
     } catch (e) { 
       console.error("Error al registrar click analítico:", e); 
     }
+  };
+
+  // Función para construir el mensaje y redireccionar al WhatsApp del emprendedor
+  const handlePlaceOrder = async () => {
+    if (selectedItems.length === 0) {
+      alert("Por favor, selecciona al menos un producto usando los botones (+) antes de realizar el pedido.");
+      return;
+    }
+
+    await handleWhatsAppClick();
+
+    let message = `¡Hola! Me interesa realizar un pedido en tu emprendimiento *${venture.name}* a través de la plataforma EmprendeUTB. Aquí tienes el detalle:\n\n`;
+    
+    selectedItems.forEach(item => {
+      const subtotal = (Number(item.price) * item.quantity).toFixed(2);
+      message += `• *${item.quantity}x* ${item.name} ($${Number(item.price).toFixed(2)} c/u) → Subtotal: $${subtotal}\n`;
+    });
+
+    message += `\n💰 *Total de la Cotización:* $${totalQuote.toFixed(2)}`;
+    message += `\n📍 *Punto de Entrega sugerido:* ${venture.location || "Campus UTB"}`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/593${venture.phone.replace(/^0/, "")}?text=${encodedMessage}`;
+    
+    window.open(whatsappUrl, "_blank", "noreferrer");
   };
 
   const handleAddReview = async (e) => {
@@ -318,29 +377,70 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
 
           <div className="content-block">
             <h2>Catálogo de Artículos y Lista de Precios</h2>
+            <p className="muted small" style={{ marginBottom: "1rem" }}>Usa los botones de más (+) y menos (-) para ajustar las cantidades y cotizar tu pedido en tiempo real.</p>
             <div className="products-grid">
               {venture.products && venture.products.length > 0 ? (
-                venture.products.map((p) => (
-                  <div key={p.id} className="product-card">
-                    {p.image ? (
-                      <img src={p.image} alt={p.name} className="product-card-img" />
-                    ) : (
-                      <div className="product-card-img product-card-placeholder" style={{ background: venture.color + "15" }}>
-                        <Sparkles size={20} style={{ color: venture.color }} />
+                venture.products.map((p) => {
+                  const currentQty = quantities[p.id] || 0;
+                  return (
+                    <div key={p.id} className="product-card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                      <div>
+                        {p.image ? (
+                          <img src={p.image} alt={p.name} className="product-card-img" />
+                        ) : (
+                          <div className="product-card-img product-card-placeholder" style={{ background: venture.color + "15" }}>
+                            <Sparkles size={20} style={{ color: venture.color }} />
+                          </div>
+                        )}
+                        <div className="product-card-body">
+                          <div className="product-card-row">
+                            <h4>{p.name}</h4>
+                            <span className="price" style={{ color: venture.color }}>
+                              <DollarSign size={14} style={{ display: "inline", marginRight: "-2px" }} />
+                              {Number(p.price).toFixed(2)}
+                            </span>
+                          </div>
+                          <p className="muted small product-description-text">{p.desc || "Sin especificaciones."}</p>
+                        </div>
                       </div>
-                    )}
-                    <div className="product-card-body">
-                      <div className="product-card-row">
-                        <h4>{p.name}</h4>
-                        <span className="price" style={{ color: venture.color }}>
-                          <DollarSign size={14} style={{ display: "inline", marginRight: "-2px" }} />
-                          {Number(p.price).toFixed(2)}
-                        </span>
+
+                      {/* Selectores de Cantidad Integrados por Producto */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderTop: "1px solid var(--glass-border)", background: "rgba(0,0,0,0.01)" }}>
+                        <span className="font-small muted">Cantidad:</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                          <button 
+                            type="button" 
+                            className="pill" 
+                            onClick={() => handleDecrease(p.id)}
+                            style={{ width: "28px", height: "28px", padding: 0, display: "flex", alignItems: "center", justifycontent: "center", minWidth: "auto", fontWeight: "bold" }}
+                          >
+                            -
+                          </button>
+                          <strong style={{ minWidth: "16px", textAlign: "center", fontSize: "0.9rem" }}>{currentQty}</strong>
+                          <button 
+                            type="button" 
+                            className="pill" 
+                            onClick={() => handleIncrease(p.id)}
+                            style={{ 
+                              width: "28px", 
+                              height: "28px", 
+                              padding: 0, 
+                              display: "flex", 
+                              alignItems: "center", 
+                              justifyContent: "center", 
+                              minWidth: "auto", 
+                              fontWeight: "bold",
+                              background: currentQty > 0 ? venture.color : "",
+                              color: currentQty > 0 ? "#FFFFFF" : ""
+                            }}
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
-                      <p className="muted small product-description-text">{p.desc || "Sin especificaciones."}</p>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className="muted small" style={{ gridColumn: "1 / -1", padding: "1.5rem", textAlign: "center" }}>Este negocio no cuenta con productos activos en su catálogo.</p>
               )}
@@ -409,7 +509,51 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
           </div>
         </div>
 
-        <aside className="contact-card" style={{ "--accent": venture.color }}>
+        <aside className="contact-card" style={{ "--accent": venture.color, height: "fit-content", position: "sticky", top: "20px" }}>
+          {/* MÓDULO INTERACTIVO DE COTIZACIÓN Y CARRITO */}
+          <div style={{ borderBottom: "1px solid var(--glass-border)", paddingBottom: "1.25rem", marginBottom: "1.25rem" }}>
+            <h3 style={{ fontSize: "1.1rem", marginBottom: "0.75rem" }}>Resumen del Pedido</h3>
+            
+            {selectedItems.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeigth: "180px", overflowY: "auto", margin: "0.75rem 0", paddingRight: "4px" }}>
+                {selectedItems.map(item => (
+                  <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem" }}>
+                    <span className="muted" style={{ maxWidth: "75%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <strong>{item.quantity}x</strong> {item.name}
+                    </span>
+                    <strong style={{ color: "var(--text)" }}>${(Number(item.price) * item.quantity).toFixed(2)}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted font-small" style={{ margin: "1rem 0", fontStyle: "italic" }}>No has añadido artículos a tu cotización.</p>
+            )}
+
+            <div style={{ display: "flex", justifycontent: "space-between", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px dashed var(--glass-border)" }}>
+              <span style={{ fontSize: "0.9rem", fontWeight: "600" }}>Total Estimado:</span>
+              <strong style={{ fontSize: "1.3rem", color: venture.color }}>${totalQuote.toFixed(2)}</strong>
+            </div>
+
+            <button
+              type="button"
+              className="cta-btn cta-solid full"
+              onClick={handlePlaceOrder}
+              disabled={selectedItems.length === 0}
+              style={{
+                background: selectedItems.length > 0 ? "#25D366" : "var(--glass-border)",
+                boxShadow: selectedItems.length > 0 ? "0 4px 12px rgba(37, 211, 102, 0.2)" : "none",
+                color: selectedItems.length > 0 ? "#FFFFFF" : "var(--muted)",
+                cursor: selectedItems.length > 0 ? "pointer" : "not-allowed",
+                marginTop: "1.25rem",
+                fontWeight: "700",
+                width: "100%",
+                justifyContent: "center"
+              }}
+            >
+              <Phone size={16} /> Realizar Pedido por WhatsApp
+            </button>
+          </div>
+
           <div className="contact-card-header">
             <h3>Canales de Atención</h3>
             <span className="verified-tag"><Award size={12} /> Emprendedor UTB</span>
