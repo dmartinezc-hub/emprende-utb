@@ -377,7 +377,7 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
         <div className="stats-dashboard">
           <div className="dashboard-header">
             <h4><TrendingUp size={16} /> Métricas Analíticas del Comercio Universitario</h4>
-            <span className="badge-live">Sincronizado con Firebase</span>
+            <span className="badge-live">Sincronizado</span>
           </div>
           <div className="stats-grid">
             <div className="stat-box">
@@ -875,7 +875,7 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
         ))}
       </div>
       <button type="submit" className="cta-btn cta-solid full" style={{ padding: "1rem" }} disabled={!canSubmit}>
-        {editingVenture ? "Actualizar Datos del Emprendimiento" : "Publicar Proyecto en EmprendedoresUTB"}
+        {editingVenture ? "Actualizar Datos del Emprendimiento" : "Publicar Proyecto en EmprendeUTB"}
       </button>
     </form>
   );
@@ -1694,6 +1694,81 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 const auth = getAuth(app);
 
+// 🟢 COMPONENTE DE EDICIÓN DE PERFIL (Colócalo arriba de export default function App)
+function ProfileView({ user, onSave, onCancel }) {
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+  });
+  const [savedMessage, setSavedMessage] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const updatedUser = { ...user, ...formData };
+    localStorage.setItem("utb_logged_user", JSON.stringify(updatedUser));
+    onSave(updatedUser);
+    setSavedMessage(true);
+    setTimeout(() => setSavedMessage(false), 3000);
+  };
+
+  return (
+    <div className="shell" style={{ marginTop: "2rem", maxWidth: "500px" }}>
+      <h2>Editar Perfil</h2>
+      <p className="muted" style={{ marginBottom: "1.5rem" }}>
+        Actualiza tus datos de cuenta universitarios.
+      </p>
+
+      {savedMessage && (
+        <div style={{ padding: "0.75rem", background: "#10B98122", color: "#10B981", borderRadius: "8px", marginBottom: "1rem" }}>
+          ¡Perfil actualizado con éxito!
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <div>
+          <label style={{ display: "block", marginBottom: "0.25rem", fontWeight: "600" }}>Nombre Completo</label>
+          <input 
+            type="text" 
+            required 
+            value={formData.name} 
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+          />
+        </div>
+
+        <div>
+          <label style={{ display: "block", marginBottom: "0.25rem", fontWeight: "600" }}>Correo Institucional o Personal</label>
+          <input 
+            type="email" 
+            required 
+            value={formData.email} 
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+          />
+        </div>
+
+        <div>
+          <label style={{ display: "block", marginBottom: "0.25rem", fontWeight: "600" }}>Teléfono / WhatsApp</label>
+          <input 
+            type="tel" 
+            value={formData.phone} 
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
+            placeholder="0991234567"
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+          <button type="submit" className="cta-btn cta-solid" style={{ flex: 1 }}>
+            Guardar Cambios
+          </button>
+          <button type="button" className="cta-btn cta-ghost" onClick={onCancel}>
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState("home");
   const [activeCategory, setActiveCategory] = useState("Todas");
@@ -2152,6 +2227,18 @@ export default function App() {
             {user ? (
               <div className="user-nav-container" style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
                 <span className="font-small" style={{ fontWeight: "700" }}>👤 {user.name}</span>
+               
+<button 
+    type="button"
+    className="cta-btn cta-ghost small"
+    onClick={() => {
+      setView("profile");
+      setMobileMenu(false);
+    }}
+  >
+    ✏️ Editar Perfil
+  </button>
+
                 {view === "home" && (
   <button 
     type="button" 
@@ -2166,7 +2253,7 @@ export default function App() {
     <Plus size={14} /> Registrar Comercio
   </button>
 )}
-              <button className="cta-btn cta-ghost small" onClick={() => { localStorage.removeItem("utb_logged_user"); setUser(null); setMobileMenu(false); goHome(); }}>Salir</button>
+              <button className="cta-btn cta-ghost small" onClick={() => { localStorage.removeItem("utb_logged_user"); setUser(null); setMobileMenu(false); goHome(); }}>Cerrar Sesión</button>
             </div>
           ) : (
             view === "home" && <button className="cta-btn cta-solid" onClick={() => { setView("auth"); setMobileMenu(false); }}>Acceso Emprendedor</button>
@@ -2246,7 +2333,19 @@ export default function App() {
         <AuthView onCancel={goHome} onAuthSuccess={(u) => { setUser(u); setView("home"); }} />
       )}
 
-      {/* 🟢 AQUÍ AGREGAS ESTE BLOQUE */}
+      {/* 🟢 VISTA DE EDICIÓN DE PERFIL */}
+      {view === "profile" && (
+        <ProfileView 
+          user={user} 
+          onSave={(updatedUser) => {
+            setUser(updatedUser);
+            goHome();
+          }} 
+          onCancel={goHome} 
+        />
+      )}
+
+      {/* VISTA DE REGISTRO / EDICIÓN DE EMPRENDIMIENTO */}
       {view === "register" && (
         <RegisterView 
           onCancel={goHome} 
