@@ -2219,21 +2219,24 @@ export default function App() {
         <AuthView onCancel={goHome} onAuthSuccess={(u) => { setUser(u); setView("register"); }} />
       )}
       
-    {view === "detail" && selected && (
-  <DetailView 
-    venture={selected} 
-    onBack={goHome} 
-    currentUser={user} 
-    onEditClick={() => setView("register")} 
-    onVentureUpdate={handleVentureUpdateFromReview} 
-    // ¡ESTA ES LA LÍNEA QUE FALTA EN TU ARCHIVO!
-    onVentureDelete={(deletedId) => {
-      setVentures(vs => vs.filter(item => item.id !== deletedId));
-      goHome();
-    }}
-  />
-)}
+ {/* VISTA DE DETALLE */}
+      {view === "detail" && selected && (
+        <DetailView 
+          venture={selected} 
+          onBack={goHome} 
+          currentUser={user} 
+          onEditClick={() => setView("register")} 
+          onVentureUpdate={handleVentureUpdateFromReview} 
+          onVentureDelete={(deletedId) => {
+            setVentures(vs => vs.filter(item => item.id !== deletedId));
+            goHome();
+          }}
+        />
+      )}
+
       <SupportChat />
     </div>
   );
 }
+
+export default App;
