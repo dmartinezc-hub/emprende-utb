@@ -342,7 +342,7 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
     <div className="detail-view">
       <div className="detail-nav-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <button className="back-btn" onClick={onBack}>
-          <ArrowLeft size={16} /> Volver a la vitrina comercial
+          <ArrowLeft size={16} /> Volver a la pagina comercial
         </button>
         
         {/* PANEL ADMINISTRATIVO EXCLUSIVO: EDITAR Y ELIMINAR */}
@@ -875,7 +875,7 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
         ))}
       </div>
       <button type="submit" className="cta-btn cta-solid full" style={{ padding: "1rem" }} disabled={!canSubmit}>
-        {editingVenture ? "Actualizar Datos del Emprendimiento" : "Publicar Proyecto en la Vitrina Comercial UTB"}
+        {editingVenture ? "Actualizar Datos del Emprendimiento" : "Publicar Proyecto en EmprendedoresUTB"}
       </button>
     </form>
   );
@@ -2148,17 +2148,24 @@ export default function App() {
 </div>
 
         
-        <div className={`navbar-actions-group ${mobileMenu ? "mobile-open" : ""}`}>
-          
-          
-          {user ? (
-            <div className="user-nav-container" style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-              <span className="font-small" style={{ fontWeight: "700" }}>👤 {user.name}</span>
-              {view === "home" && (
-                <button className="cta-btn cta-solid small" onClick={() => { setView("register"); setMobileMenu(false); }}>
-                  <Plus size={14} /> Registrar Comercio
-                </button>
-              )}
+      <div className={`navbar-actions-group ${mobileMenu ? "mobile-open" : ""}`}>
+            {user ? (
+              <div className="user-nav-container" style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+                <span className="font-small" style={{ fontWeight: "700" }}>👤 {user.name}</span>
+                {view === "home" && (
+  <button 
+    type="button" 
+    className="cta-btn cta-solid small" 
+    onClick={(e) => { 
+      e.preventDefault();
+      e.stopPropagation();
+      setView("register"); 
+      setMobileMenu(false); 
+    }}
+  >
+    <Plus size={14} /> Registrar Comercio
+  </button>
+)}
               <button className="cta-btn cta-ghost small" onClick={() => { localStorage.removeItem("utb_logged_user"); setUser(null); setMobileMenu(false); goHome(); }}>Salir</button>
             </div>
           ) : (
@@ -2238,8 +2245,19 @@ export default function App() {
       {view === "auth" && (
         <AuthView onCancel={goHome} onAuthSuccess={(u) => { setUser(u); setView("home"); }} />
       )}
+
+      {/* 🟢 AQUÍ AGREGAS ESTE BLOQUE */}
+      {view === "register" && (
+        <RegisterView 
+          onCancel={goHome} 
+          currentUser={user} 
+          onSuccess={() => {
+            setView("home");
+          }} 
+        />
+      )}
       
- {/* VISTA DE DETALLE */}
+      {/* VISTA DE DETALLE */}
       {view === "detail" && selected && (
         <DetailView 
           venture={selected} 
