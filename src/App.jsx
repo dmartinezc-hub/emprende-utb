@@ -1730,6 +1730,26 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("utb_theme", darkMode ? "dark" : "light");
   }, [darkMode]);
+  
+  useEffect(() => {
+    if (view === "home") {
+      window.history.replaceState({ view: "home" }, "");
+    } else {
+      window.history.pushState({ view }, "");
+    }
+
+    const handlePopState = (event) => {
+      if (event.state && event.state.view) {
+        setView(event.state.view);
+      } else {
+        setView("home");
+      }
+      setSelectedId(null);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [view]);
 
   const filtered = useMemo(() => {
     return ventures.filter((v) => {
