@@ -756,7 +756,7 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
         <div className="success-icon"><Check size={28} /></div>
         <h2>Sincronización Exitosa</h2>
         <p className="muted">La base de datos central de la UTB fue actualizada con los parámetros de tu negocio.</p>
-        <button className="cta-btn cta-solid" onClick={onCancel}>Volver a la Vitrina Principal</button>
+        <button className="cta-btn cta-solid" onClick={onCancel}>Volver a la Pagina Principal</button>
       </div>
     );
   }
@@ -885,7 +885,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   
-  // Campos del formulario
+  // Campos del formulario convencional
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -893,18 +893,18 @@ function AuthView({ onCancel, onAuthSuccess }) {
   const [phone, setPhone] = useState("");
   const [faculty, setFaculty] = useState(FACULTADES ? FACULTADES[0] : "");
 
-  // Estados de visualización de contraseña
+  // Estados de visualización de contraseñas
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Estados para recuperación de contraseña
-  const [recoveryStep, setRecoveryStep] = useState(1); // 1: Correo, 2: Código y Nueva Clave
+  // Estados para el flujo de recuperación de contraseña
+  const [recoveryStep, setRecoveryStep] = useState(1); // 1: Ingresar correo, 2: Validar código y nueva clave
   const [sentCode, setSentCode] = useState("");
   const [inputCode, setInputCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
 
-  // Autenticación con Correo y Contraseña (Iniciar Sesión / Registrarse)
+  // 1. Manejo de Autenticación por Correo / Registro Manual
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) return;
@@ -924,7 +924,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
         const allUsers = querySnapshot.docs.map(doc => doc.data());
         
         if (allUsers.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-          alert("El correo electrónico ya se encuentra registrado globalmente.");
+          alert("El correo electrónico ya se encuentra registrado.");
           return;
         }
 
@@ -940,6 +940,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
         alert("Hubo un problema de conexión con el servidor de Firebase.");
       }
     } else {
+      // Flujo de Login convencional
       try {
         const usersRef = collection(db, "users");
         const querySnapshot = await getDocs(usersRef);
@@ -959,7 +960,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
     }
   };
 
-  // Autenticación REAL con Google usando Firebase Auth
+  // 2. Flujo de Autenticación con Google OAuth
   const handleGoogleAuth = async () => {
     try {
       const provider = new GoogleAuthProvider();
@@ -976,6 +977,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
       let loggedUser = allUsers.find(u => u.email.toLowerCase() === googleUserEmail.toLowerCase());
       
       if (!loggedUser) {
+        // Registro automático si el correo de Google no existe en la BD corporativa
         const newUserId = "usr_gg_" + googleUser.uid; 
         loggedUser = {
           id: newUserId,
@@ -991,6 +993,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
       
       localStorage.setItem("utb_logged_user", JSON.stringify(loggedUser));
       onAuthSuccess(loggedUser);
+      window.location.reload();
     } catch (error) {
       console.error("Error en Google Sign-In:", error);
       if (error.code !== "auth/popup-closed-by-user") {
@@ -999,7 +1002,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
     }
   };
 
-  // Flujo para Olvidó su Contraseña: Envío de Código
+  // 3. Flujo Olvidó Contraseña: Envío de Código de Simulación
   const handleSendRecoveryCode = async (e) => {
     e.preventDefault();
     if (!email.trim()) {
@@ -1018,6 +1021,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
         return;
       }
 
+      // Generar código aleatorio de 6 dígitos
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       setSentCode(code);
       
@@ -1030,7 +1034,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
     }
   };
 
-  // Flujo para Olvidó su Contraseña: Validar Código y Actualizar Clave en Firestore
+  // 4. Flujo Olvidó Contraseña: Validación y Modificación en Firestore
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
     if (!inputCode.trim() || !newPassword.trim()) {
@@ -1055,6 +1059,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
         
         alert("¡Contraseña actualizada con éxito en los servidores de la Universidad! Ya puedes iniciar sesión.");
         
+        // Limpieza de estados y retorno al Login
         setIsForgotPassword(false);
         setRecoveryStep(1);
         setPassword("");
@@ -1069,6 +1074,9 @@ function AuthView({ onCancel, onAuthSuccess }) {
     }
   };
 
+  /* ==========================================
+     INTERFAZ 1: FORMULARIO DE RECUPERACIÓN
+     ========================================== */
   if (isForgotPassword) {
     return (
       <div className="form-view main-card font-smooth">
@@ -1142,6 +1150,9 @@ function AuthView({ onCancel, onAuthSuccess }) {
     );
   }
 
+  /* ==========================================
+     INTERFAZ 2: LOGIN / REGISTRO ESTÁNDAR
+     ========================================== */
   return (
     <div className="form-view main-card font-smooth">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
@@ -1160,6 +1171,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
         </p>
       </div>
 
+      {/* Botón de Google OAuth */}
       <button 
         type="button" 
         onClick={handleGoogleAuth} 
@@ -1270,13 +1282,12 @@ function AuthView({ onCancel, onAuthSuccess }) {
               type="button" 
               className="cta-btn cta-ghost small" 
               onClick={() => setIsForgotPassword(true)}
-              style={{ fontSize: "0.8rem", color: "var(--muted)" }}
+              style={{ fontSize: "0.8rem", color: "var(--muted)", cursor: "pointer", background: "none", border: "none" }}
             >
               ¿Olvidaste tu contraseña?
-            </button>
+            </button>l
           </div>
         )}
-
         <button type="submit" className="cta-btn cta-solid" style={{ width: "100%", marginTop: "0.5rem", padding: "0.9rem" }}>
           {isRegistering ? "Finalizar Mi Registro" : "Iniciar Sesión e Ingresar"}
         </button>
@@ -1290,6 +1301,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
     </div>
   );
 }
+
 function SupportChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -1460,7 +1472,7 @@ html, body, #root, .app-container {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, var(--utb-green), var(--utb-blue));
+          background: var(--utb-green);
           position: fixed;
           bottom: 24px;
           right: 24px;
@@ -1493,7 +1505,7 @@ html, body, #root, .app-container {
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
         .chat-window-header {
-          background: linear-gradient(135deg, var(--utb-green), var(--utb-blue));
+          background: var(--utb-green);
           padding: 1.2rem;
           color: #FFFFFF;
           display: flex;
@@ -1814,8 +1826,18 @@ export default function App() {
         .navbar-actions-group { display: flex; align-items: center; gap: 1.2rem; }
         
         .cta-btn { padding: 0.65rem 1.25rem; border-radius: 999px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid transparent; }
-        .cta-solid { background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); color: #FFFFFF !important; box-shadow: 0 4px 14px rgba(13, 71, 43, 0.2); transition: all 0.2s ease; }
-        .cta-solid:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(13, 71, 43, 0.35); }
+        .cta-solid {
+  background: var(--utb-green);
+  border: 1px solid var(--utb-green);
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(13, 71, 43, 0.35);
+  transition: all 0.2s ease;
+}
+
+.cta-solid:hover {
+  background: #0A3A23;
+  border-color: #0A3A23;
+}
         .cta-ghost { border: 1px solid var(--glass-border); color: var(--text); background: var(--ink-elevated); transition: all 0.2s ease; }
         .cta-ghost:hover { border-color: var(--utb-green); color: var(--utb-green); background: rgba(13, 71, 43, 0.02); }
         .cta-btn.small { padding: 0.45rem 0.85rem; font-size: 0.78rem; }
@@ -1826,12 +1848,20 @@ export default function App() {
         /* HERO INSTITUCIONAL */
         .hero { max-width: 1180px; margin: 3rem auto 0; padding: 0 1.5rem; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 3rem; align-items: center; }
         .hero h1 { font-size: 3rem; line-height: 1.1; letter-spacing: -0.03em; }
-        .hero-green-gradient-text { background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .hero-green-gradient-text { color: var(--utb-green); background: none; -webkit-background-clip: initial; background-clip: initial; }
         .hero p.lead { margin-top: 1.2rem; font-size: 1.1rem; line-height: 1.6; color: var(--muted); max-width: 48ch; }
         .search-box { display: flex; align-items: center; gap: 0.6rem; background: var(--ink-elevated); border: 1px solid var(--glass-border); border-radius: 999px; padding: 0.75rem 1.25rem; max-width: 460px; margin-top: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
         .search-box input { border: none; background: transparent; width: 100%; padding: 0; font-size: 0.95rem; }
         .hero-graphics-cluster { display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--ink-elevated); border: 1px solid var(--glass-border); padding: 3rem 2rem; border-radius: 24px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.01); }
-        .hero-center-crest { max-width: 40%; height: auto; object-fit: contain; margin-bottom: 1.5rem; }
+        .hero-center-crest {
+  max-width: 40%;
+  height: auto;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 20px;
+  padding: 12px;
+  margin-bottom: 1.5rem;
+}
         .hero-metric-tag { background: var(--ink); border: 1px solid var(--glass-border); width: 100%; border-radius: 14px; padding: 1rem; text-align: center; }
         .eyebrow { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; display: block; }
 
@@ -1941,9 +1971,7 @@ export default function App() {
         .auth-form-body { display: flex; flex-direction: column; gap: 1.1rem; margin-top: 1rem; }
         .auth-view-toggle-footer { text-align: center; margin-top: 1.2rem; font-size: 0.85rem; }
         .toggle-interactive-link { color: var(--utb-green); font-weight: 700; cursor: pointer; }
-
-        /* SOPORTE VIRTUAL FLOATING */
-        .support-floating-bubble { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); position: fixed; bottom: 24px; right: 24px; z-index: 999; box-shadow: 0 4px 20px rgba(13,71,43,0.3); }
+        .support-floating-bubble { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--utb-green); position: fixed; bottom: 24px; right: 24px; z-index: 999; box-shadow: 0 4px 20px rgba(13,71,43,0.3); }
         .support-chat-window { width: 330px; height: 430px; background: var(--ink-elevated); border-radius: 20px; border: 1px solid var(--glass-border); box-shadow: 0 12px 40px rgba(0,0,0,0.12); position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; overflow: hidden; }
         .chat-window-header { background: linear-gradient(135deg, var(--utb-green), var(--utb-blue)); padding: 1.2rem; color: #FFFFFF; display: flex; justify-content: space-between; align-items: center; }
         .chat-header-titles { display: flex; flex-direction: column; }
@@ -2060,21 +2088,48 @@ export default function App() {
           </div>
         </div>
 
-        {/* BOTÓN HAMBURGUESA: Fuera del contenedor para que no se oculte a sí mismo */}
-        <button
-          className="hamburger-btn"
-          onClick={() => setMobileMenu(!mobileMenu)}
-          type="button"
-          aria-label="Alternar menú"
-        >
-          {mobileMenu ? <X size={24} /> : <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
 
-        {/* CONTENEDOR DE ACCIONES DINÁMICO */}
+  <button
+    className="icon-btn"
+    onClick={() => setDarkMode(!darkMode)}
+    aria-label="Cambiar tema"
+  >
+    {darkMode
+      ? <Sun size={18} style={{ color: "#FFB000" }} />
+      : <Moon size={18} />}
+  </button>
+
+  <button
+    className="hamburger-btn"
+    onClick={() => setMobileMenu(!mobileMenu)}
+    type="button"
+    aria-label="Alternar menú"
+  >
+    {mobileMenu ? (
+      <X size={24} />
+    ) : (
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      >
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    )}
+  </button>
+
+</div>
+
+        
         <div className={`navbar-actions-group ${mobileMenu ? "mobile-open" : ""}`}>
-          <button onClick={() => { setDarkMode(!darkMode); setMobileMenu(false); }} className="icon-btn" aria-label="Cambiar tema">
-            {darkMode ? <Sun size={17} style={{ color: "#FFB000" }} /> : <Moon size={17} />}
-          </button>
+          
           
           {user ? (
             <div className="user-nav-container" style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
@@ -2092,7 +2147,6 @@ export default function App() {
         </div>
       </nav>
 
-      {/* VISTA HOME */}
       {view === "home" && (
         <div className="shell" style={{ marginTop: "2rem" }}>
           <header className="hero">
@@ -2164,10 +2218,6 @@ export default function App() {
       {view === "auth" && (
         <AuthView onCancel={goHome} onAuthSuccess={(u) => { setUser(u); setView("register"); }} />
       )}
-      
-     {view === "detail" && selected && (
-  <DetailView venture={selected} onBack={goHome} currentUser={user} onEditClick={() => setView("register")} onVentureUpdate={handleVentureUpdateFromReview} />
-)}
       
     {view === "detail" && selected && (
   <DetailView 
