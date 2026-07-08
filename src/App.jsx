@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import {
   Search,
+  RefreshCw,
   Phone,
   ArrowLeft,
   Plus,
@@ -1302,169 +1303,84 @@ function AuthView({ onCancel, onAuthSuccess }) {
   );
 }
 
+const FAQ_DATA = {
+  cliente: [
+    {
+      q: "¿Cómo realizo un pedido a un emprendimiento?",
+      a: "Para hacer un pedido, entra a la tarjeta del negocio en el catálogo, selecciona tus productos/cantidades y presiona el botón 'Realizar Pedido por WhatsApp'. Esto te abrirá un chat directo con el emprendedor."
+    },
+    {
+      q: "¿Dónde se entregan los productos dentro de la UTB?",
+      a: "Cada emprendimiento especifica su zona de entrega (Ej: Puerta 1, Puerta 2, Áreas Verdes o Facultad). Puedes coordinar el punto exacto de encuentro al escribirles por WhatsApp."
+    },
+    {
+      q: "¿Los precios publicados son finales?",
+      a: "Sí, todos los precios mostrados en el catálogo son establecidos directamente por los estudiantes emprendedores."
+    },
+    {
+      q: "¿Puedo calificar o dejar una reseña a un negocio?",
+      a: "¡Sí! Inicia sesión con tu cuenta, entra al detalle del emprendimiento y en la sección inferior podrás dejar tu valoración con estrellas y un comentario."
+    }
+  ],
+  empleador: [
+    {
+      q: "¿Cómo puedo registrar mi emprendimiento?",
+      a: "Inicia sesión en la plataforma, abre el menú superior y presiona el botón '+ Registrar Comercio'. Llena la información de tu negocio, productos y fotos."
+    },
+    {
+      q: "📸 Error al subir imágenes o fotos",
+      a: "Para evitar fallos de cuota en Firestore, procesamos las imágenes mediante ImgBB. Asegúrate de que el archivo sea JPG/PNG y no supere los 5MB para generar el enlace CDN correctamente."
+    },
+    {
+      q: "¿Tiene algún costo publicar mi negocio en EmprendeUTB?",
+      a: "No, la plataforma es 100% gratuita para la comunidad universitaria de la Universidad Técnica de Babahoyo (FAFI, FACS, FCJSE, FACIAG)."
+    },
+    {
+      q: "¿Cómo sé cuántas personas han visto mi emprendimiento?",
+      a: "El sistema registra automáticamente las visitas y clics hacia tu WhatsApp en la base de datos de la plataforma."
+    }
+  ]
+};
+
 function SupportChat() {
   const [isOpen, setIsOpen] = useState(false);
+  const [role, setRole] = useState(null); // 'cliente' | 'empleador' | null
+  const [selectedFaq, setSelectedFaq] = useState(null);
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([
-    { 
-      id: 1, 
-      text: "¡Hola! Bienvenido al soporte inteligente de EmprendeUTB. Soy tu asistente técnico de la universidad. ¿En qué te puedo colaborar hoy?", 
-      sender: "bot" 
-    }
-  ]);
+  const [customMessages, setCustomMessages] = useState([]);
 
-  // Preguntas frecuentes para agilizar la interacción del usuario
-  const QUICK_QUESTIONS = [
-    { label: "📸 Error al subir imágenes", value: "Tengo un problema al subir la imagen de mi producto o portada" },
-    { label: "🏫 ¿Es para toda la UTB?", value: "Quiero saber si mi facultad puede participar en el proyecto" },
-    { label: "💾 ¿Cómo se guardan los datos?", value: "Cómo funciona el almacenamiento con Firebase" }
-  ];
+  const resetChat = () => {
+    setRole(null);
+    setSelectedFaq(null);
+    setCustomMessages([]);
+  };
 
   const processBotResponse = (userText) => {
     const text = userText.toLowerCase();
     
     if (text.includes("imagen") || text.includes("foto") || text.includes("subir") || text.includes("error")) {
-      return "💡 **Consejo Técnico:** Para evitar el error de cuotas en Firebase, procesamos las imágenes a través de ImgBB. Si te da error, asegúrate de que el archivo sea JPG/PNG y no pese más de 5MB. ¡El sistema generará un enlace CDN optimizado automáticamente!";
+      return "💡 Para evitar errores en Firebase/ImgBB, asegura que la foto sea JPG/PNG y pese menos de 5MB.";
     }
-    if (text.includes("fafi") || text.includes("facultad") || text.includes("utb") || text.includes("toda")) {
-      return "🏫 **Alcance Institucional:** ¡El proyecto es de toda la UTB! Está habilitado el registro para la FAFI, FACS, FCJSE y FACIAG, incluyendo sus respectivos predios y campus. ¡Buscamos integrar a toda la comunidad universitaria!";
+    if (text.includes("facultad") || text.includes("utb") || text.includes("fafi")) {
+      return "🏫 EmprendeUTB está disponible para FAFI, FACS, FCJSE y FACIAG.";
     }
-    if (text.includes("guardar") || text.includes("firebase") || text.includes("base de datos") || text.includes("sincronizar")) {
-      return "⚡ **Infraestructura:** Al pulsar 'Publicar', el formulario valida que no existan arreglos corruptos u objetos vacíos y los guarda en las colecciones seguras de Firestore en tiempo real. ¡Tu vitrina se actualiza al instante!";
-    }
-    if (text.includes("precio") || text.includes("producto") || text.includes("dinero")) {
-      return "💵 **Gestión de Catálogo:** Recuerda ingresar valores numéricos en el campo de precio (ej. 1.50). El sistema formateará el valor automáticamente con el signo de dólar e incluirá la descripción de tus variantes.";
-    }
-    
-    return "Entendido. Tu consulta sobre el ecosistema comercial UTB ha sido registrada. Nuestro equipo técnico revisará los logs de Firebase si experimentas algún fallo en el despliegue.";
+    return "Entendido. Tu consulta sobre el ecosistema commercial UTB ha sido registrada.";
   };
 
-  const handleSendMessage = (textToSend) => {
-    if (!textToSend.trim()) return;
-    
-    const userMsg = { id: Date.now(), text: textToSend, sender: "user" };
-    setMessages((prev) => [...prev, userMsg]);
-
-    setTimeout(() => {
-      const botReplyText = processBotResponse(textToSend);
-      setMessages((prev) => [...prev, { 
-        id: Date.now() + 1, 
-        text: botReplyText, 
-        sender: "bot" 
-      }]);
-    }, 600);
-  };
-
-  const onSubmitForm = (e) => {
+  const handleSendMessage = (e) => {
     e.preventDefault();
-    handleSendMessage(input);
+    if (!input.trim()) return;
+
+    const userMsg = { id: Date.now(), text: input, sender: "user" };
+    const botReply = { id: Date.now() + 1, text: processBotResponse(input), sender: "bot" };
+
+    setCustomMessages((prev) => [...prev, userMsg, botReply]);
     setInput("");
   };
 
   return (
     <div className="support-chat-container">
       <style>{`
-        /* --- ARREGLO GLOBAL PARA PANTALLA EN BLANCO Y DESBORDE RESPONSIVO --- */
-html, body, #root, .app-container {
-  max-width: 100% !important;
-  width: 100% !important;
-  overflow-x: hidden !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-}
-
-*, *:before, *:after {
-  box-sizing: inherit !important;
-}
-
-.shell, .content-viewport, .home-view, .form-view, .detail-view {
-  width: 100% !important;
-  max-width: 100% !important;
-  padding: 12px !important;
-  overflow-x: hidden !important;
-  box-sizing: border-box !important;
-}
-
-.search-box, .search-bar-wrapper, .search-box input {
-  max-width: 100% !important;
-  width: 100% !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  box-sizing: border-box !important;
-}
-
-@media (max-width: 768px) {
-    /* --- CORRECCIÓN DE LA CABECERA Y EL MENÚ DE ACCIONES --- */
-    .main-header {
-      padding: 0.8rem !important;
-      flex-direction: column !important;
-      gap: 1rem !important;
-      align-items: center !important;
-      text-align: center !important;
-      width: 100% !important;
-    }
-
-    .header-actions {
-      display: flex !important;
-      flex-wrap: wrap !important; /* Permite que los botones bajen limpiamente si no alcanzan */
-      gap: 8px !important;
-      width: 100% !important;
-      justify-content: center !important;
-    }
-
-    .header-actions .cta-btn {
-      flex: 1 !important; /* Hace que los botones del menú ocupen el mismo ancho en móvil */
-      min-width: 130px !important;
-      justify-content: center !important;
-      padding: 0.6rem !important;
-      font-size: 0.85rem !important;
-    }
-
-    /* --- CONTENEDORES INTERNOS --- */
-    .filters-section-bento, .sidebar-panel, .bento-grid, .products-grid, .detail-grid {
-      display: flex !important;
-      flex-direction: column !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      padding: 0 !important;
-      gap: 1rem !important;
-    }
-
-    .pills-flexbox, .filters {
-      display: flex !important;
-      flex-wrap: wrap !important;
-      gap: 6px !important;
-      width: 100% !important;
-    }
-
-    .venture-card, .product-card, .detail-banner, .contact-card, .review-form {
-      width: 100% !important;
-      max-width: 100% !important;
-      margin-left: 0 !important;
-      margin-right: 0 !important;
-      box-sizing: border-box !important;
-    }
-
-    h1 {
-      font-size: 1.6rem !important;
-    }
-
-    .hero {
-      padding: 0.8rem !important;
-      flex-direction: column !important;
-      gap: 0.8rem !important;
-      align-items: flex-start !important;
-    }
-
-    .support-chat-window {
-      width: calc(100% - 32px) !important;
-      right: 16px !important;
-      bottom: 85px !important;
-    }
-  }
-
-        /* --- ESTILOS DE SOPORTE ORIGINALES PRESERVADOS --- */
         .support-floating-bubble {
           width: 56px;
           height: 56px;
@@ -1472,13 +1388,14 @@ html, body, #root, .app-container {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: var(--utb-green);
+          background: var(--utb-green, #10B981);
           position: fixed;
           bottom: 24px;
           right: 24px;
           z-index: 999;
           box-shadow: 0 4px 20px rgba(13,71,43,0.35);
-          transform: scale(1);
+          border: none;
+          cursor: pointer;
           transition: transform 0.2s ease;
         }
         .support-floating-bubble:hover {
@@ -1486,11 +1403,13 @@ html, body, #root, .app-container {
         }
         .support-chat-window {
           width: 360px;
-          height: 500px;
-          background: var(--ink-elevated);
+          max-height: 520px;
+          height: 80vh;
+          background: var(--ink-elevated, #1e293b);
+          color: var(--text, #f8fafc);
           border-radius: 20px;
-          border: 1px solid var(--glass-border);
-          box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+          border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+          box-shadow: 0 12px 40px rgba(0,0,0,0.25);
           position: fixed;
           bottom: 24px;
           right: 24px;
@@ -1505,22 +1424,16 @@ html, body, #root, .app-container {
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
         .chat-window-header {
-          background: var(--utb-green);
-          padding: 1.2rem;
+          background: var(--utb-green, #10B981);
+          padding: 1rem 1.2rem;
           color: #FFFFFF;
           display: flex;
           justify-content: space-between;
           align-items: center;
         }
-        .chat-header-titles {
-          display: flex;
-          flex-direction: column;
-          gap: 0.1rem;
-        }
         .chat-main-title {
           font-size: 0.95rem;
           font-weight: 700;
-          color: #FFFFFF;
         }
         .chat-status-sub {
           font-size: 0.72rem;
@@ -1535,146 +1448,183 @@ html, body, #root, .app-container {
           background: #25D366;
           border-radius: 50%;
           display: inline-block;
-          animation: pulseGlow 1.5s infinite;
         }
-        @keyframes pulseGlow {
-          0% { opacity: 0.4; }
-          50% { opacity: 1; }
-          100% { opacity: 0.4; }
-        }
-        .chat-messages-viewport {
+        .chat-body-viewport {
           flex: 1;
-          padding: 1.2rem;
+          padding: 1rem;
           overflow-y: auto;
           display: flex;
           flex-direction: column;
-          gap: 0.9rem;
+          gap: 0.8rem;
+          font-size: 0.88rem;
         }
-        .chat-bubble {
-          max-width: 85%;
-          padding: 0.7rem 0.95rem;
-          border-radius: 16px;
-          font-size: 0.85rem;
-          line-height: 1.4;
-          word-break: break-word;
-        }
-        .bubble-user {
-          align-self: flex-end;
-          background: var(--utb-green);
-          color: #FFFFFF;
-          border-bottom-right-radius: 2px;
-          box-shadow: 0 2px 8px rgba(13,71,43,0.15);
-        }
-        .bubble-bot {
-          align-self: flex-start;
-          background: rgba(0,0,0,0.05);
-          color: var(--text);
-          border-bottom-left-radius: 2px;
-          border: 1px solid var(--glass-border);
-        }
-        .dark-mode-active .bubble-bot {
-          background: rgba(255,255,255,0.06);
-        }
-        .chat-quick-replies-area {
-          display: flex;
-          flex-direction: column;
-          gap: 0.4rem;
-          padding: 0.5rem 1rem;
-          background: rgba(0,0,0,0.01);
-          border-top: 1px solid var(--glass-border);
-        }
-        .quick-reply-btn {
-          text-align: left;
-          padding: 0.45rem 0.75rem;
+        .role-btn {
+          padding: 0.75rem;
           border-radius: 8px;
-          border: 1px solid var(--glass-border);
-          background: var(--ink-elevated);
-          color: var(--text);
-          font-size: 0.78rem;
-          font-weight: 500;
-          width: 100%;
-          transition: all 0.15s ease;
+          border: 1px solid rgba(255,255,255,0.15);
+          background: rgba(255,255,255,0.08);
+          color: inherit;
+          font-weight: 600;
           cursor: pointer;
+          text-align: left;
         }
-        .quick-reply-btn:hover {
-          border-color: var(--utb-green);
-          color: var(--utb-green);
-          background: rgba(13,71,43,0.02);
+        .faq-btn {
+          padding: 0.6rem 0.8rem;
+          border-radius: 8px;
+          border: 1px solid var(--utb-green, #10B981);
+          background: transparent;
+          color: inherit;
+          font-size: 0.82rem;
+          cursor: pointer;
+          text-align: left;
+          line-height: 1.3;
         }
         .chat-input-row {
           display: flex;
           padding: 0.75rem;
-          border-top: 1px solid var(--glass-border);
+          border-top: 1px solid rgba(255,255,255,0.1);
           gap: 0.5rem;
-          background: var(--ink-elevated);
-          align-items: center;
+          background: rgba(0,0,0,0.1);
         }
         .chat-input-row input {
+          flex: 1;
           font-size: 0.85rem;
-          padding: 0.6rem 0.85rem;
+          padding: 0.5rem 0.85rem;
           border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.15);
+          background: rgba(255,255,255,0.05);
+          color: inherit;
         }
-        .chat-submit-arrow {
-          width: 36px;
-          height: 36px;
+        .chat-submit-btn {
+          width: 34px;
+          height: 34px;
           border-radius: 50%;
-          padding: 0;
+          border: none;
+          background: var(--utb-green, #10B981);
+          color: #fff;
+          display: flex;
+          align-items: center;
           justify-content: center;
-          flex-shrink: 0;
+          cursor: pointer;
+        }
+        @media (max-width: 768px) {
+          .support-chat-window {
+            width: calc(100% - 32px) !important;
+            right: 16px !important;
+            bottom: 85px !important;
+          }
         }
       `}</style>
 
+      {/* BOTÓN FLOTANTE */}
       {!isOpen && (
-        <button onClick={() => setIsOpen(true)} className="support-floating-bubble" aria-label="Abrir mesa de ayuda">
+        <button onClick={() => setIsOpen(true)} className="support-floating-bubble" aria-label="Abrir Soporte">
           <MessageSquare size={24} color="#FFF" />
         </button>
       )}
 
+      {/* VENTANA DEL CHAT */}
       {isOpen && (
         <div className="support-chat-window">
           <div className="chat-window-header">
-            <div className="chat-header-titles">
-              <span className="chat-main-title">Mesa de Soporte Tecnológico UTB</span>
-              <span className="chat-status-sub"><span className="status-dot" /> Asistente Universitario en línea</span>
+            <div>
+              <div className="chat-main-title">Asistente EmprendeUTB</div>
+              <div className="chat-status-sub"><span className="status-dot" /> En línea</div>
             </div>
-            <button onClick={() => setIsOpen(false)} style={{ color: "#FFF", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}><X size={18} /></button>
+            <div style={{ display: "flex", gap: "6px" }}>
+              {role && (
+                <button onClick={resetChat} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }} title="Reiniciar">
+                  <RefreshCw size={16} />
+                </button>
+              )}
+              <button onClick={() => setIsOpen(false)} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}>
+                <X size={20} />
+              </button>
+            </div>
           </div>
 
-          <div className="chat-messages-viewport">
-            {messages.map((m) => (
-              <div 
-                key={m.id} 
-                className={`chat-bubble ${m.sender === "user" ? "bubble-user" : "bubble-bot"}`}
-              >
-                {m.text}
+          <div className="chat-body-viewport">
+            <div style={{ background: "rgba(255,255,255,0.05)", padding: "0.75rem", borderRadius: "10px", borderLeft: "3px solid var(--utb-green, #10B981)" }}>
+              👋 ¡Hola! Selecciona tu perfil o escribe tu duda en la parte inferior:
+            </div>
+
+            {/* SELECCIÓN DE ROL */}
+            {!role && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.4rem" }}>
+                <button className="role-btn" onClick={() => setRole("cliente")}>
+                  🛍️ Soy Cliente / Comprador
+                </button>
+                <button className="role-btn" onClick={() => setRole("empleador")}>
+                  💼 Soy Emprendedor / Vendedor
+                </button>
+              </div>
+            )}
+
+            {/* PREGUNTAS FRECUENTES DEL ROL */}
+            {role && !selectedFaq && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <p style={{ fontSize: "0.78rem", color: "#94a3b8", margin: 0 }}>
+                  Preguntas habituales para {role === "cliente" ? "Clientes" : "Emprendedores"}:
+                </p>
+                {FAQ_DATA[role].map((item, index) => (
+                  <button key={index} className="faq-btn" onClick={() => setSelectedFaq(item)}>
+                    ❓ {item.q}
+                  </button>
+                ))}
+                <button 
+                  onClick={() => setRole(null)} 
+                  style={{ background: "none", border: "none", color: "#94a3b8", fontSize: "0.8rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", marginTop: "0.4rem" }}
+                >
+                  <ArrowLeft size={14} /> Cambiar perfil
+                </button>
+              </div>
+            )}
+
+            {/* DETALLE DE PREGUNTA SELECCIONADA */}
+            {selectedFaq && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                <div style={{ alignSelf: "flex-end", background: "var(--utb-green, #10B981)", color: "#fff", padding: "0.6rem 0.8rem", borderRadius: "12px 12px 0 12px", maxWidth: "85%" }}>
+                  {selectedFaq.q}
+                </div>
+                <div style={{ alignSelf: "flex-start", background: "rgba(255,255,255,0.08)", padding: "0.75rem", borderRadius: "12px 12px 12px 0", borderLeft: "3px solid #3b82f6", lineHeight: "1.4" }}>
+                  💡 {selectedFaq.a}
+                </div>
+                <button 
+                  onClick={() => setSelectedFaq(null)} 
+                  style={{ alignSelf: "center", background: "none", border: "1px solid rgba(255,255,255,0.2)", color: "inherit", padding: "0.3rem 0.8rem", borderRadius: "20px", fontSize: "0.75rem", cursor: "pointer", marginTop: "0.4rem" }}
+                >
+                  ↩️ Ver otras preguntas
+                </button>
+              </div>
+            )}
+
+            {/* MENSAJES LIBRES DEL USUARIO */}
+            {customMessages.map((msg) => (
+              <div key={msg.id} style={{
+                alignSelf: msg.sender === "user" ? "flex-end" : "flex-start",
+                background: msg.sender === "user" ? "var(--utb-green, #10B981)" : "rgba(255,255,255,0.08)",
+                color: "#fff",
+                padding: "0.6rem 0.85rem",
+                borderRadius: msg.sender === "user" ? "12px 12px 0 12px" : "12px 12px 12px 0",
+                maxWidth: "85%"
+              }}>
+                {msg.text}
               </div>
             ))}
           </div>
 
-          {/* SUGERENCIAS INTERACTIVAS (QUICK REPLIES) */}
-          <div className="chat-quick-replies-area">
-            {QUICK_QUESTIONS.map((q, idx) => (
-              <button 
-                key={idx} 
-                type="button" 
-                className="quick-reply-btn"
-                onClick={() => handleSendMessage(q.value)}
-              >
-                {q.label}
-              </button>
-            ))}
-          </div>
-
-          <form onSubmit={onSubmitForm} className="chat-input-row">
+          {/* INPUT PARA ESCRIBIR */}
+          <form onSubmit={handleSendMessage} className="chat-input-row">
             <input 
-              placeholder="Escribe tu consulta sobre el sistema..." 
+              placeholder="Escribe una pregunta libre..." 
               value={input} 
               onChange={(e) => setInput(e.target.value)} 
             />
-            <button type="submit" className="cta-btn cta-solid chat-submit-arrow">
+            <button type="submit" className="chat-submit-btn">
               <Send size={14} />
             </button>
           </form>
+
         </div>
       )}
     </div>
