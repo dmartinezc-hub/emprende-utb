@@ -1725,7 +1725,7 @@ export default function App() {
       }
     };
     loadData();
-  }, []);
+  }, [view, user]);
 
   useEffect(() => {
     localStorage.setItem("utb_theme", darkMode ? "dark" : "light");
@@ -2216,7 +2216,7 @@ export default function App() {
 
       {/* OTRAS VISTAS CONDICIONALES */}
       {view === "auth" && (
-        <AuthView onCancel={goHome} onAuthSuccess={(u) => { setUser(u); setView("register"); }} />
+        <AuthView onCancel={goHome} onAuthSuccess={(u) => { setUser(u); setView("home"); }} />
       )}
       
  {/* VISTA DE DETALLE */}
