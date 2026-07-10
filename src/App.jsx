@@ -90,6 +90,8 @@ const FACEBOOK_ICON = (props) => (
   </svg>
 );
 
+
+
 const uploadToImgBB = async (file) => {
   const formData = new FormData();
   formData.append("image", file);
@@ -684,10 +686,26 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingProd, setUploadingProd] = useState({});
 
+// 🟢 EFECTO PARA REESCRIBIR EL FORMULARIO CUANDO ENTRAS EN MODO EDICIÓN
+  React.useEffect(() => {
+    if (editingVenture) {
+      setForm({ ...editingVenture });
+    }
+  }, [editingVenture]);
+
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
   const updateProduct = (id, field, value) =>
     setForm((f) => ({ ...f, products: f.products.map((p) => (p.id === id ? { ...p, [field]: value } : p)) }));
-  const addProduct = () => setForm((f) => ({ ...f, products: [...f.products, emptyProduct()] }));
+  const addProduct = () => setForm((f) => ({ 
+    ...f, 
+    products: [...f.products, {
+      id: `p-${Math.random().toString(36).slice(2)}-${Date.now()}`,
+      name: "",
+      price: "",
+      desc: "",
+      image: ""
+    }] 
+  }));
   const removeProduct = (id) => setForm((f) => ({ ...f, products: f.products.filter((p) => p.id !== id) }));
 
   const handleMainImageUpload = async (e) => {
@@ -2189,13 +2207,14 @@ export default function App() {
     ✏️ Editar Perfil
   </button>
 
-                {view === "home" && (
+  {view === "home" && (
   <button 
     type="button" 
     className="cta-btn cta-solid small" 
     onClick={(e) => { 
       e.preventDefault();
       e.stopPropagation();
+      setEditingVenture(null); // <--- IMPORTANTE: Limpia ediciones anteriores
       setView("register"); 
       setMobileMenu(false); 
     }}
@@ -2203,6 +2222,7 @@ export default function App() {
     <Plus size={14} /> Registrar Comercio
   </button>
 )}
+  
               <button className="cta-btn cta-ghost small" onClick={() => { localStorage.removeItem("utb_logged_user"); setUser(null); setMobileMenu(false); goHome(); }}>Cerrar Sesión</button>
             </div>
           ) : (
@@ -2295,31 +2315,58 @@ export default function App() {
         />
       )}
 
-      {/* VISTA DE REGISTRO / EDICIÓN DE EMPRENDIMIENTO */}
+  {/* VISTA DE REGISTRO / EDICIÓN DE EMPRENDIMIENTO */}
       {view === "register" && (
         <RegisterView 
           onCancel={goHome} 
           currentUser={user} 
-          onSuccess={() => {
-            setView("home");
+          editingVenture={editingVenture || selected}
+          onSubmit={async (finalData) => {
+            try {
+              // Guarda o actualiza directamente en la colección 'ventures' en Firestore
+              await setDoc(doc(db, "ventures", finalData.id), finalData);
+              
+              // Actualiza el estado local en App.jsx para ver el cambio de inmediato
+              setVentures(prev => {
+                const exists = prev.some(v => v.id === finalData.id);
+                if (exists) {
+                  return prev.map(v => v.id === finalData.id ? finalData : v);
+                }
+                return [finalData, ...prev];
+              });
+              
+              // Si estabas editando, actualiza también el negocio seleccionado en la vista detalle
+              if (selected && selected.id === finalData.id) {
+                setSelected(finalData);
+              }
+              
+              alert("¡Información guardada con éxito en la base de datos!");
+              goHome();
+            } catch (error) {
+              console.error("Error al guardar en Firestore:", error);
+              alert("Hubo un problema de conexión al guardar los datos en la nube.");
+            }
           }} 
         />
       )}
       
       {/* VISTA DE DETALLE */}
       {view === "detail" && selected && (
-        <DetailView 
-          venture={selected} 
-          onBack={goHome} 
-          currentUser={user} 
-          onEditClick={() => setView("register")} 
-          onVentureUpdate={handleVentureUpdateFromReview} 
-          onVentureDelete={(deletedId) => {
-            setVentures(vs => vs.filter(item => item.id !== deletedId));
-            goHome();
-          }}
-        />
-      )}
+  <DetailView 
+    venture={selected} 
+    onBack={goHome} 
+    currentUser={user} 
+    onEditClick={(venture) => {
+      setEditingVenture(venture); // <--- Guarda el emprendimiento que se va a editar
+      setView("register");       // <--- Cambia a la vista del formulario
+    }} 
+    onVentureUpdate={handleVentureUpdateFromReview}
+    onVentureDelete={(id) => {
+      setVentures(prev => prev.filter(v => v.id !== id));
+      goHome();
+    }}
+  />
+)}
 
       <SupportChat />
     </div>
