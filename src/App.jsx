@@ -10,7 +10,8 @@ import {
   updateDoc, 
   increment, 
   arrayUnion,
-  deleteDoc 
+  deleteDoc,
+  writeBatch
 } from "firebase/firestore";
 import {
   Search,
@@ -133,6 +134,34 @@ const emptyForm = (currentOwner, currentEmail) => ({
   reviews: []
 });
 
+const updateUserVentures = async (updatedUser) => {
+  try {
+    const snapshot = await getDocs(collection(db, "ventures"));
+
+    const batch = writeBatch(db);
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+
+      // Busca los emprendimientos del usuario
+      if (data.owner === updatedUser.name) {
+        batch.update(docSnap.ref, {
+          ownerPhoto: updatedUser.photoURL,
+          owner: updatedUser.name,
+          faculty: updatedUser.faculty || data.faculty,
+          career: updatedUser.career || data.career
+        });
+      }
+    });
+
+    await batch.commit();
+
+    console.log("Todos los emprendimientos fueron actualizados.");
+  } catch (err) {
+    console.error(err);
+  }
+};
+
 function RiverDivider() {
   return (
     <div className="river-divider" aria-hidden="true">
@@ -194,9 +223,50 @@ function VentureCard({ v, onOpen, big }) {
             </span>
           )}
         </div>
-        <h3>{v.name}</h3>
-        <p className="muted card-owner-text">{v.owner}</p>
-        <span className="card-faculty-tag-badge">{v.faculty ? v.faculty.split(" (")[0] : "UTB Matriz"}</span>
+       <h3>{v.name}</h3>
+
+<div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    marginTop: "8px",
+    marginBottom: "6px"
+  }}
+>
+  <img
+    src={
+      v.ownerPhoto ||
+      "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+    }
+    alt={v.owner}
+    style={{
+      width: "40px",
+      height: "40px",
+      borderRadius: "50%",
+      objectFit: "cover",
+      border: "2px solid #ffffff"
+    }}
+  />
+
+  <div>
+    <p
+      style={{
+        margin: 0,
+        fontWeight: "600",
+        color: "#fff"
+      }}
+    >
+      {v.owner}
+    </p>
+
+    <span className="card-faculty-tag-badge">
+      {v.faculty
+        ? v.faculty.split(" (")[0]
+        : "UTB Matriz"}
+    </span>
+  </div>
+</div>
         <div className="card-location-footer">
           <MapPin size={12} /> 
           <span>{v.location || "Campus UTB"}</span>
@@ -213,7 +283,7 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
   const [comment, setComment] = useState("");
   const [reviewerName, setReviewerName] = useState(currentUser ? currentUser.name : "");
 
-  // Estado para controlar las cantidades de cada producto en el carrito
+  const [showProfilePhoto, setShowProfilePhoto] = useState(false);
   const [quantities, setQuantities] = useState({});
 
   const ratingAvg = useMemo(() => {
@@ -414,7 +484,58 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
         <div className="detail-banner-content">
           <span className="eyebrow" style={{ color: "#FFFFFF", backgroundColor: venture.color, padding: "0.2rem 0.6rem", borderRadius: "4px", display: "inline-block", marginBottom: "0.5rem" }}>{venture.category}</span>
           <h1>{venture.name}</h1>
-          <p className="subtitle-owner"><User size={14} /> Por: {venture.owner} · <GraduationCap size={14} /> {venture.faculty}</p>
+          <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    marginTop: "12px",
+    marginBottom: "10px"
+  }}
+>
+  <img
+  src={
+    venture.ownerPhoto ||
+    "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+  }
+  alt={venture.owner}
+  onClick={() => setShowProfilePhoto(true)}
+  style={{
+    width: "60px",
+    height: "60px",
+    borderRadius: "50%",
+    objectFit: "cover",
+    border: "3px solid rgba(255,255,255,0.9)",
+    cursor: "pointer",
+    transition: "0.3s"
+  }}
+/>
+
+  <div>
+    <div
+      style={{
+        fontWeight: "700",
+        fontSize: "18px",
+        color: "#fff"
+      }}
+    >
+      {venture.owner}
+    </div>
+
+    <div
+      style={{
+        color: "#e5e7eb",
+        fontSize: "14px",
+        display: "flex",
+        alignItems: "center",
+        gap: "6px"
+      }}
+    >
+      <GraduationCap size={14} />
+      {venture.faculty}
+    </div>
+  </div>
+</div>
           <p className="subtitle-career"><BookOpen size={14} /> {venture.career}</p>
           <div className="detail-location-tag">
             <MapPin size={14} /> <span>Campus/Zona: {venture.location || "Instalaciones UTB"}</span>
@@ -671,7 +792,52 @@ function DetailView({ venture, onBack, currentUser, onEditClick, onVentureUpdate
             </a>
           )}
         </aside>
-      </div>
+          </div>
+
+      {/* MODAL PARA VER LA FOTO EN GRANDE */}
+      {showProfilePhoto && (
+        <div
+          onClick={() => setShowProfilePhoto(false)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(0,0,0,0.85)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ textAlign: "center" }}
+          >
+            <img
+              src={
+                venture.ownerPhoto ||
+                "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+              }
+              alt={venture.owner}
+              style={{
+                width: "320px",
+                height: "320px",
+                borderRadius: "50%",
+                objectFit: "cover",
+                border: "5px solid white",
+                boxShadow: "0 0 30px rgba(0,0,0,.5)"
+              }}
+            />
+
+            <h2 style={{ color: "white", marginTop: "20px" }}>
+              {venture.owner}
+            </h2>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -764,7 +930,10 @@ function RegisterView({ currentUser, editingVenture, onCancel, onSubmit }) {
       products: parsedProducts,
       reviews: form.reviews || [],
       views: form.views || 0,
-      whatsappClicks: form.whatsappClicks || 0
+      whatsappClicks: form.whatsappClicks || 0,
+      ownerPhoto: currentUser?.photoURL || "",
+      ownerName: currentUser?.name || "",
+
     });
     setDone(true);
   };
@@ -1668,9 +1837,25 @@ function ProfileView({ user, onSave, onCancel }) {
     name: user?.name || '',
     email: user?.email || '',
     phone: user?.phone || '',
+    photoURL: user?.photoURL || ""
   });
   const [savedMessage, setSavedMessage] = useState(false);
+  const handleImage = (e) => {
+  const file = e.target.files[0];
 
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onloadend = () => {
+    setFormData(prev => ({
+      ...prev,
+      photoURL: reader.result
+    }));
+  };
+
+  reader.readAsDataURL(file);
+};
   const handleSubmit = (e) => {
     e.preventDefault();
     const updatedUser = { ...user, ...formData };
@@ -1694,6 +1879,33 @@ function ProfileView({ user, onSave, onCancel }) {
       )}
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        
+        <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+
+  <img
+    src={
+      formData.photoURL ||
+      "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+    }
+    alt="Perfil"
+    style={{
+      width: "120px",
+      height: "120px",
+      borderRadius: "50%",
+      objectFit: "cover",
+      border: "3px solid #0D472B",
+      marginBottom: "10px"
+    }}
+  />
+
+  <input
+    type="file"
+    accept="image/*"
+    onChange={handleImage}
+  />
+
+</div>
+        
         <div>
           <label style={{ display: "block", marginBottom: "0.25rem", fontWeight: "600" }}>Nombre Completo</label>
           <input 
@@ -2195,7 +2407,33 @@ export default function App() {
       <div className={`navbar-actions-group ${mobileMenu ? "mobile-open" : ""}`}>
             {user ? (
               <div className="user-nav-container" style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-                <span className="font-small" style={{ fontWeight: "700" }}>👤 {user.name}</span>
+                <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "10px"
+  }}
+>
+
+  <img
+    src={
+      user.photoURL ||
+      "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+    }
+    alt={user.name}
+    style={{
+      width: "40px",
+      height: "40px",
+      borderRadius: "50%",
+      objectFit: "cover"
+    }}
+  />
+
+  <span style={{ fontWeight: "700" }}>
+    {user.name}
+  </span>
+
+</div>
                
 <button 
     type="button"
@@ -2306,14 +2544,18 @@ export default function App() {
 
       {/* 🟢 VISTA DE EDICIÓN DE PERFIL */}
       {view === "profile" && (
-        <ProfileView 
-          user={user} 
-          onSave={(updatedUser) => {
-            setUser(updatedUser);
-            goHome();
-          }} 
-          onCancel={goHome} 
-        />
+        <ProfileView
+  user={user}
+  onSave={async (updatedUser) => {
+
+    setUser(updatedUser);
+
+    await updateUserVentures(updatedUser);
+
+    goHome();
+  }}
+  onCancel={goHome}
+/>
       )}
 
   {/* VISTA DE REGISTRO / EDICIÓN DE EMPRENDIMIENTO */}
