@@ -1883,19 +1883,20 @@ function ProfileView({ user, onSave, onCancel }) {
 
 for (const ventureDoc of venturesSnapshot.docs) {
 
-  const venture = ventureDoc.data();
+    const venture = ventureDoc.data();
 
-  if (venture.owner === updatedUser.name) {
+    if (venture.owner === updatedUser.name) {
 
-    await setDoc(
-      doc(db, "ventures", venture.id),
-      {
-        ...venture,
-        ownerPhoto: updatedUser.photoURL
-      }
-    );
+        await setDoc(
+            doc(db, "ventures", ventureDoc.id),
+            {
+                ...venture,
+                ownerPhoto: updatedUser.photoURL
+            },
+            { merge: true }
+        );
 
-  }
+    }
 
 }
 
