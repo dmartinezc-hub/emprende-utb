@@ -1400,7 +1400,7 @@ function SupportChat() {
     <div className="support-chat-container">
       <style>{`
         .support-floating-bubble {
-          width: 56px;
+          width: 56px;np
           height: 56px;
           border-radius: 50%;
           display: flex;
@@ -1745,6 +1745,7 @@ export default function App() {
   const [maxPrice, setMaxPrice] = useState(30);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
+  const [editingVenture, setEditingVenture] = useState(null);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("utb_theme") === "dark");
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("utb_logged_user")));
   const [ventures, setVentures] = useState([]);
@@ -2214,7 +2215,7 @@ export default function App() {
     onClick={(e) => { 
       e.preventDefault();
       e.stopPropagation();
-      setEditingVenture(null); // <--- IMPORTANTE: Limpia ediciones anteriores
+      setEditingVenture(null);
       setView("register"); 
       setMobileMenu(false); 
     }}
@@ -2335,10 +2336,6 @@ export default function App() {
                 return [finalData, ...prev];
               });
               
-              // Si estabas editando, actualiza también el negocio seleccionado en la vista detalle
-              if (selected && selected.id === finalData.id) {
-                setSelected(finalData);
-              }
               
               alert("¡Información guardada con éxito en la base de datos!");
               goHome();
