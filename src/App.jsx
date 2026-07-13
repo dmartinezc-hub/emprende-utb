@@ -1120,6 +1120,8 @@ function AuthView({ onCancel, onAuthSuccess }) {
         const newUserId = "usr_" + Date.now();
         const newUser = { id: newUserId, name, email, password, faculty, phone, photoURL: "" };
         
+
+        
         await setDoc(doc(db, "users", newUserId), newUser);
         alert("¡Registro estudiantil exitoso en la red EmprendeUTB!");
         localStorage.setItem("utb_logged_user", JSON.stringify(newUser));
@@ -1867,7 +1869,9 @@ function ProfileView({ user, onSave, onCancel }) {
       ...formData
     };
 
-    // Guardar en Firestore
+    console.log("updatedUser:", updatedUser);
+console.log("updatedUser.id:", updatedUser.id);
+console.log("db:", db);
     await setDoc(
       doc(db, "users", updatedUser.id),
       updatedUser,
@@ -1891,7 +1895,7 @@ for (const ventureDoc of venturesSnapshot.docs) {
     console.log("Usuario actualizado:", updatedUser);
     console.log("ID:", updatedUser.id);
     console.log("DB:", db);
-
+    console.log("ventureDoc.id:", ventureDoc.id);
         await setDoc(
             doc(db, "ventures", ventureDoc.id),
             {
