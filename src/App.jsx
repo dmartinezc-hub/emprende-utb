@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+
 import { 
   getFirestore, 
   collection, 
@@ -1887,6 +1888,10 @@ for (const ventureDoc of venturesSnapshot.docs) {
 
     if (venture.owner === updatedUser.name) {
 
+    console.log("Usuario actualizado:", updatedUser);
+    console.log("ID:", updatedUser.id);
+    console.log("DB:", db);
+
         await setDoc(
             doc(db, "ventures", ventureDoc.id),
             {
@@ -1905,10 +1910,10 @@ for (const ventureDoc of venturesSnapshot.docs) {
     setSavedMessage(true);
     setTimeout(() => setSavedMessage(false), 3000);
 
-  } catch (error) {
-    console.error(error);
-    alert("No se pudo actualizar el perfil.");
-  }
+ } catch (error) {
+  console.error("ERROR:", error);
+  alert(error.message);
+}
 };
 
   return (
