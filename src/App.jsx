@@ -1117,7 +1117,7 @@ function AuthView({ onCancel, onAuthSuccess }) {
         }
 
         const newUserId = "usr_" + Date.now();
-        const newUser = { id: newUserId, name, email, password, faculty, phone };
+        const newUser = { id: newUserId, name, email, password, faculty, phone, photoURL: "" };
         
         await setDoc(doc(db, "users", newUserId), newUser);
         alert("¡Registro estudiantil exitoso en la red EmprendeUTB!");
@@ -1168,13 +1168,14 @@ function AuthView({ onCancel, onAuthSuccess }) {
         // Registro automático si el correo de Google no existe en la BD corporativa
         const newUserId = "usr_gg_" + googleUser.uid; 
         loggedUser = {
-          id: newUserId,
-          name: googleUserName,
-          email: googleUserEmail,
-          password: "google_oauth_bypass_" + Math.random().toString(36).substring(2),
-          faculty: FACULTADES ? FACULTADES[0] : "", 
-          phone: "0999999999"    
-        };
+    id: newUserId,
+    name: googleUserName,
+    email: googleUserEmail,
+    password: "...",
+    faculty: FACULTADES ? FACULTADES[0] : "",
+    phone: "0999999999",
+    photoURL: googleUser.photoURL || ""
+};
         await setDoc(doc(db, "users", newUserId), loggedUser);
         alert("¡Cuenta de Google vinculada exitosamente en EmprendeUTB!");
       }
@@ -1856,14 +1857,58 @@ function ProfileView({ user, onSave, onCancel }) {
 
   reader.readAsDataURL(file);
 };
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const updatedUser = { ...user, ...formData };
-    localStorage.setItem("utb_logged_user", JSON.stringify(updatedUser));
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    const updatedUser = {
+      ...user,
+      ...formData
+    };
+
+    // Guardar en Firestore
+    await setDoc(
+      doc(db, "users", updatedUser.id),
+      updatedUser,
+      { merge: true }
+    );
+
+    // Guardar también en localStorage
+    localStorage.setItem(
+      "utb_logged_user",
+      JSON.stringify(updatedUser)
+    );
+
+    const venturesSnapshot = await getDocs(collection(db, "ventures"));
+
+for (const ventureDoc of venturesSnapshot.docs) {
+
+  const venture = ventureDoc.data();
+
+  if (venture.owner === updatedUser.name) {
+
+    await setDoc(
+      doc(db, "ventures", venture.id),
+      {
+        ...venture,
+        ownerPhoto: updatedUser.photoURL
+      }
+    );
+
+  }
+
+}
+
     onSave(updatedUser);
+
     setSavedMessage(true);
     setTimeout(() => setSavedMessage(false), 3000);
-  };
+
+  } catch (error) {
+    console.error(error);
+    alert("No se pudo actualizar el perfil.");
+  }
+};
 
   return (
     <div className="shell" style={{ marginTop: "2rem", maxWidth: "500px" }}>
