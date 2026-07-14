@@ -2045,6 +2045,7 @@ export default function App() {
   }, [darkMode]);
   
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (view === "home") {
       window.history.replaceState({ view: "home" }, "");
     } else {
