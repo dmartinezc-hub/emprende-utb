@@ -251,15 +251,15 @@ function VentureCard({ v, onOpen, big }) {
   />
 
   <div>
-    <p
-      style={{
-        margin: 0,
-        fontWeight: "600",
-        color: "#fff"
-      }}
-    >
-      {v.owner}
-    </p>
+   <p
+  style={{
+    margin: 0,
+    fontWeight: "600",
+    color: "var(--text)"
+  }}
+>
+  {v.owner}
+</p>
 
     <span className="card-faculty-tag-badge">
       {v.faculty
@@ -2220,8 +2220,22 @@ export default function App() {
         .venture-card-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
         .card-top-meta { display: flex; justify-content: space-between; align-items: center; }
         .rating-badge { background: rgba(255, 176, 0, 0.12); color: #FFB000; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem; }
-        .card-owner-text { font-size: 0.88rem; font-weight: 500; margin: 0; }
-        .card-faculty-tag-badge { font-size: 0.7rem; background: rgba(13, 71, 43, 0.08); color: var(--utb-green); padding: 0.15rem 0.4rem; border-radius: 4px; width: fit-content; font-weight: 600; }
+        .card-owner-text { font-size: 0.88rem; font-weight: 600; margin: 0; color: var(--text); }
+        .card-faculty-tag-badge {
+    font-size: 0.7rem;
+    background: #E8F5E9;
+    color: #0D472B;
+    border: 1px solid #C8E6C9;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    width: fit-content;
+    font-weight: 600;
+}
+    .dark-mode-active .card-faculty-tag-badge {
+    background: rgba(140, 159, 42, 0.18);
+    color: #D9F99D;
+    border: 1px solid rgba(140, 159, 42, 0.35);
+}
         .card-location-footer { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--muted); margin-top: auto; padding-top: 0.6rem; border-top: 1px solid var(--glass-border); }
         .venture-card-glow { position: absolute; width: 80px; height: 80px; border-radius: 50%; filter: blur(40px); opacity: 0.12; top: -30px; right: -30px; }
         .no-results { grid-column: 1 / -1; text-align: center; padding: 5rem 0; color: var(--muted); font-size: 0.95rem; }
