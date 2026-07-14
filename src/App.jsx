@@ -1844,21 +1844,23 @@ function ProfileView({ user, onSave, onCancel }) {
     photoURL: user?.photoURL || ""
   });
   const [savedMessage, setSavedMessage] = useState(false);
-  const handleImage = (e) => {
+  const handleImage = async (e) => {
   const file = e.target.files[0];
 
   if (!file) return;
 
-  const reader = new FileReader();
+  try {
+    const url = await uploadToImgBB(file);
 
-  reader.onloadend = () => {
     setFormData(prev => ({
       ...prev,
-      photoURL: reader.result
+      photoURL: url
     }));
-  };
 
-  reader.readAsDataURL(file);
+  } catch (err) {
+    console.error(err);
+    alert("No se pudo subir la imagen.");
+  }
 };
  const handleSubmit = async (e) => {
   e.preventDefault();
